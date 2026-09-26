@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm>=9.2", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sfxrender"
+dynamic = ["version"]
+description = "Deterministic, extensible sound-effect rendering for Python and SSMD workflows"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+authors = [{name = "buchwandler"}]
+dependencies = ["numpy>=1.24"]
+keywords = ["audio", "sfx", "foley", "ssmd", "audiobook"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Multimedia :: Sound/Audio",
+]
+
+[project.urls]
+Homepage = "https://github.com/buchwandler/sfxrender"
+Repository = "https://github.com/buchwandler/sfxrender"
+Issues = "https://github.com/buchwandler/sfxrender/issues"
+
+[project.scripts]
+sfxrender = "sfxrender.cli:main"
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.2",
+  "pytest>=8",
+  "ruff>=0.6",
+  "mypy>=1.10",
+  "twine>=5",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["sfxrender*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+sfxrender = ["py.typed"]
+
+[tool.setuptools_scm]
+fallback_version = "0+unknown"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+packages = ["sfxrender"]
