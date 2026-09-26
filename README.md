@@ -56,6 +56,32 @@ HTTP audio sources unchanged.
 The sound design is deliberately simple. The API and deterministic URI contract are the
 important parts of the MVP.
 
+Built-in renderers ignore unknown query parameters so callers can preserve forward-compatible URI fields; misspelled parameters are therefore not rejected.
+
+## Audition the catalog
+
+Install the project in editable mode and render the fixed-seed listening catalog:
+
+```bash
+python -m pip install -e .
+python examples/render_catalog.py
+```
+
+Individual WAVs and `00-catalog-showcase.wav` are written to `example-artifacts/`. Generated WAV and JSON files there are intentionally gitignored; the tracked `.gitkeep` preserves the output directory.
+
+## Examples
+
+- [`examples/render_catalog.py`](examples/render_catalog.py) — individual catalog renders and a combined showcase.
+- [`examples/audiobook_scene.py`](examples/audiobook_scene.py) — a short composed arrival scene with footsteps, knocks, and a door opening.
+- [`examples/parameter_gallery.py`](examples/parameter_gallery.py) — same-seed comparisons of knock materials and walking surfaces.
+
+Run the other examples after installation:
+
+```bash
+python examples/audiobook_scene.py
+python examples/parameter_gallery.py
+```
+
 ## Extension
 
 ```python

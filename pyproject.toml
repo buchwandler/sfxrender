@@ -60,6 +60,6 @@ line-length = 100
 target-version = "py310"
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.12"  # NumPy 2.5 stubs use PEP 695 syntax requiring Python 3.12 parsing.
 strict = true
 packages = ["sfxrender"]

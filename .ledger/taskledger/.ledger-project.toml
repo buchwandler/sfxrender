@@ -1,0 +1,6 @@
+schema_version = 1
+layout_version = 3
+project_uuid = "a0274a92-9e05-49a0-b344-ffc14b9b32b2"
+tool = "taskledger"
+mount = "config"
+storage = "project"

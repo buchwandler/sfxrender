@@ -9,7 +9,11 @@ _BUILTIN_CATALOG: dict[str, dict[str, Any]] = {
     "impact.knock": {
         "description": "One or more knocks on a resonant surface.",
         "parameters": {
-            "material": {"type": "enum", "values": ["wood", "oak", "metal", "wall"], "default": "wood"},
+            "material": {
+                "type": "enum",
+                "values": ["wood", "oak", "metal", "wall"],
+                "default": "wood",
+            },
             "count": {"type": "integer", "minimum": 1, "maximum": 16, "default": 1},
             "force": {"type": "number", "minimum": 0.05, "maximum": 1.0, "default": 0.65},
             "interval": {"type": "seconds", "minimum": 0.08, "maximum": 2.0, "default": 0.22},
@@ -19,8 +23,16 @@ _BUILTIN_CATALOG: dict[str, dict[str, Any]] = {
     "footsteps.walk": {
         "description": "A sequence of walking footsteps.",
         "parameters": {
-            "surface": {"type": "enum", "values": ["wood", "stone", "gravel", "carpet"], "default": "wood"},
-            "footwear": {"type": "enum", "values": ["barefoot", "shoes", "boots", "heels"], "default": "shoes"},
+            "surface": {
+                "type": "enum",
+                "values": ["wood", "stone", "gravel", "carpet"],
+                "default": "wood",
+            },
+            "footwear": {
+                "type": "enum",
+                "values": ["barefoot", "shoes", "boots", "heels"],
+                "default": "shoes",
+            },
             "count": {"type": "integer", "minimum": 1, "maximum": 64, "default": 4},
             "force": {"type": "number", "minimum": 0.05, "maximum": 1.0, "default": 0.6},
             "interval": {"type": "seconds", "minimum": 0.18, "maximum": 2.0, "default": 0.52},

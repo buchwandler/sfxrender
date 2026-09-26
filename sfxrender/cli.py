@@ -17,7 +17,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("-o", "--output", default="sfx.wav", help="output WAV path")
     parser.add_argument("--sample-rate", type=int, default=24_000)
     parser.add_argument("--list-effects", action="store_true")
-    parser.add_argument("--catalog", action="store_true", help="print built-in effect catalog as JSON")
+    parser.add_argument(
+        "--catalog", action="store_true", help="print built-in effect catalog as JSON"
+    )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return parser
 

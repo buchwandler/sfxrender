@@ -1,0 +1,18 @@
+schema_version = 3
+
+[project]
+uuid = "a0274a92-9e05-49a0-b344-ffc14b9b32b2"
+name = "sfxrender"
+
+[ledgers.taskledger.mounts.data]
+storage = "external"
+root = "../ledger"
+
+[ledgers.taskledger.mounts.runtime]
+storage = "user-data"
+
+[ledgers.taskledger.mounts.logs]
+storage = "user-data"
+
+[ledgers.taskledger.mounts.indexes]
+storage = "cache"

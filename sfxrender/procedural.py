@@ -10,8 +10,10 @@ from ._params import choice, integer, number
 from .types import FloatAudio, RenderContext, RenderedSound, SfxSpec
 
 
-def _rng(spec: SfxSpec) -> np.random.Generator:
-    return np.random.default_rng(spec.seed)
+def _rng(spec: SfxSpec, event_index: int = 0) -> np.random.Generator:
+    """Return a stable per-event generator; omitted seeds use a reproducible default."""
+    seed = spec.seed if spec.seed is not None else 0
+    return np.random.default_rng(np.random.SeedSequence([seed, event_index]))
 
 
 def _fade_out(signal: FloatAudio, sample_rate: int, seconds: float) -> FloatAudio:
@@ -21,31 +23,51 @@ def _fade_out(signal: FloatAudio, sample_rate: int, seconds: float) -> FloatAudi
     return out
 
 
-def _normalize(signal: FloatAudio, peak: float = 0.92) -> FloatAudio:
+def _normalize_template(signal: FloatAudio, peak: float = 0.8) -> FloatAudio:
+    """Condition a synthesis template before applying semantic gain."""
     maximum = float(np.max(np.abs(signal))) if signal.size else 0.0
     if maximum > 0.0:
         signal = signal * np.float32(peak / maximum)
     return np.asarray(signal, dtype=np.float32)
 
 
+def _limit_peak(signal: FloatAudio, peak: float = 0.95) -> FloatAudio:
+    """Attenuate unsafe output without boosting quiet renders."""
+    maximum = float(np.max(np.abs(signal))) if signal.size else 0.0
+    if maximum > peak:
+        signal = signal * np.float32(peak / maximum)
+    return np.asarray(signal, dtype=np.float32)
+
+
 def _resonant_impact(
-    *, sample_rate: int, rng: np.random.Generator, force: float, modes: tuple[tuple[float, float, float], ...]
+    *, sample_rate: int, rng: np.random.Generator, modes: tuple[tuple[float, float, float], ...]
 ) -> FloatAudio:
+    """Synthesize one impact from varied body modes and a separate contact transient."""
     duration = max(decay for _, decay, _ in modes) * 5.0
     n = max(1, int(duration * sample_rate))
     t = np.arange(n, dtype=np.float32) / np.float32(sample_rate)
-    signal = np.zeros(n, dtype=np.float32)
-    phase = rng.uniform(-0.15, 0.15, size=len(modes))
-    for index, (freq, decay, gain) in enumerate(modes):
-        env = np.exp(-t / np.float32(decay))
-        signal += np.float32(gain) * env * np.sin(
-            np.float32(2.0 * math.pi * freq) * t + np.float32(phase[index])
+    body = np.zeros(n, dtype=np.float32)
+    phase = rng.uniform(-0.22, 0.22, size=len(modes))
+    frequency_scale = float(rng.uniform(0.975, 1.025))
+    for index, (frequency, decay, gain) in enumerate(modes):
+        varied_frequency = frequency * frequency_scale * float(rng.uniform(0.992, 1.008))
+        varied_decay = decay * float(rng.uniform(0.9, 1.1))
+        envelope = np.exp(-t / np.float32(varied_decay))
+        body += (
+            np.float32(gain)
+            * envelope
+            * np.sin(np.float32(2.0 * math.pi * varied_frequency) * t + np.float32(phase[index]))
         )
-    transient_n = max(1, int(0.008 * sample_rate))
-    transient = rng.normal(0.0, 1.0, transient_n).astype(np.float32)
-    transient *= np.linspace(1.0, 0.0, transient_n, dtype=np.float32)
-    signal[:transient_n] += np.float32(0.45) * transient
-    return _normalize(signal * np.float32(force))
+
+    noise = rng.normal(0.0, 1.0, n).astype(np.float32)
+    high_component = noise - np.roll(noise, 1)
+    high_component[0] = noise[0]
+    contact_env = np.exp(-t / np.float32(0.0025))
+    surface_env = np.exp(-t / np.float32(0.018))
+    hit = body * np.float32(0.82)
+    hit += noise * contact_env * np.float32(rng.uniform(0.12, 0.2))
+    hit += high_component * surface_env * np.float32(0.025)
+    return _normalize_template(hit)
 
 
 def knock(spec: SfxSpec, context: RenderContext) -> RenderedSound:
@@ -60,18 +82,18 @@ def knock(spec: SfxSpec, context: RenderContext) -> RenderedSound:
         "metal": ((420.0, 0.14, 0.8), (1150.0, 0.18, 0.55), (2500.0, 0.09, 0.25)),
         "wall": ((120.0, 0.045, 1.0), (260.0, 0.030, 0.35), (650.0, 0.018, 0.12)),
     }
-    rng = _rng(spec)
-    hit = _resonant_impact(
-        sample_rate=context.sample_rate, rng=rng, force=force, modes=modes_by_material[material]
-    )
+    modes = modes_by_material[material]
     spacing = int(interval * context.sample_rate)
-    total = spacing * (count - 1) + hit.size
+    hit_size = int(max(decay for _, decay, _ in modes) * 5.0 * context.sample_rate)
+    total = spacing * (count - 1) + hit_size
     result = np.zeros(total, dtype=np.float32)
     for index in range(count):
+        rng = _rng(spec, index)
+        hit = _resonant_impact(sample_rate=context.sample_rate, rng=rng, modes=modes)
         start = index * spacing
-        jitter = np.float32(rng.uniform(0.92, 1.05))
-        result[start : start + hit.size] += hit * jitter
-    return RenderedSound(_normalize(result), context.sample_rate, spec)
+        level = force * float(rng.uniform(0.92, 1.05))
+        result[start : start + hit.size] += hit * np.float32(level)
+    return RenderedSound(_limit_peak(result), context.sample_rate, spec)
 
 
 def footsteps(spec: SfxSpec, context: RenderContext) -> RenderedSound:
@@ -81,31 +103,53 @@ def footsteps(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     count = integer(params, "count", 4, minimum=1, maximum=64)
     force = number(params, "force", 0.6, minimum=0.05, maximum=1.0)
     interval = number(params, "interval", 0.52, minimum=0.18, maximum=2.0)
-    rng = _rng(spec)
 
-    base_freq = {"barefoot": 95.0, "shoes": 130.0, "boots": 105.0, "heels": 210.0}[footwear]
-    surface_noise = {"wood": 0.12, "stone": 0.10, "gravel": 0.42, "carpet": 0.05}[surface]
+    base_frequency = {"barefoot": 95.0, "shoes": 130.0, "boots": 105.0, "heels": 210.0}[footwear]
+    surface_texture = {"wood": 0.08, "stone": 0.12, "gravel": 0.32, "carpet": 0.045}[surface]
     decay = {"wood": 0.055, "stone": 0.035, "gravel": 0.045, "carpet": 0.028}[surface]
-    hit_n = max(1, int(0.18 * context.sample_rate))
-    t = np.arange(hit_n, dtype=np.float32) / np.float32(context.sample_rate)
+    footwear_click = {"barefoot": 0.025, "shoes": 0.07, "boots": 0.095, "heels": 0.18}[footwear]
+    hit_size = max(1, int(0.18 * context.sample_rate))
+    t = np.arange(hit_size, dtype=np.float32) / np.float32(context.sample_rate)
     spacing = int(interval * context.sample_rate)
-    total = spacing * (count - 1) + hit_n
+    total = spacing * (count - 1) + hit_size
     result = np.zeros(total, dtype=np.float32)
 
     for index in range(count):
-        local_force = force * float(rng.uniform(0.86, 1.08))
-        frequency = base_freq * float(rng.uniform(0.94, 1.06))
-        env = np.exp(-t / np.float32(decay))
-        body = np.sin(np.float32(2.0 * math.pi * frequency) * t) * env
-        noise = rng.normal(0.0, 1.0, hit_n).astype(np.float32)
-        noise_env = np.exp(-t / np.float32(max(0.015, decay * 0.65)))
-        hit = (body * np.float32(0.65) + noise * noise_env * np.float32(surface_noise))
+        rng = _rng(spec, index)
+        step_decay = decay * float(rng.uniform(0.9, 1.12))
+        frequency = base_frequency * float(rng.uniform(0.94, 1.06))
+        side = -1.0 if index % 2 else 1.0
+        phase = float(rng.uniform(-0.12, 0.12))
+        envelope = np.exp(-t / np.float32(step_decay))
+        body = np.sin(np.float32(2.0 * math.pi * frequency) * t + np.float32(phase))
+        body *= envelope * np.float32(0.67 + 0.025 * side)
+
+        noise = rng.normal(0.0, 1.0, hit_size).astype(np.float32)
+        high_component = noise - np.roll(noise, 1)
+        high_component[0] = noise[0]
+        contact_env = np.exp(-t / np.float32(0.0035))
+        texture_env = np.exp(-t / np.float32(max(0.014, step_decay * 0.75)))
+        contact = noise * contact_env * np.float32(0.18)
+        texture = noise * texture_env * np.float32(surface_texture)
+        texture += high_component * texture_env * np.float32(0.025)
+        footwear_layer = high_component * contact_env * np.float32(footwear_click)
+        if footwear == "heels":
+            heel_freq = float(rng.uniform(1400.0, 1900.0))
+            footwear_layer += np.sin(2.0 * math.pi * heel_freq * t) * contact_env * np.float32(0.12)
+
+        hit = _normalize_template(body + contact + texture + footwear_layer, peak=0.72)
         if surface == "gravel":
-            clicks = rng.random(hit_n) < (20.0 / context.sample_rate)
-            hit += clicks.astype(np.float32) * rng.uniform(0.2, 0.8, hit_n).astype(np.float32)
+            click_mask = rng.random(hit_size) < (28.0 / context.sample_rate)
+            clicks = click_mask.astype(np.float32) * rng.uniform(0.2, 0.75, hit_size).astype(
+                np.float32
+            )
+            hit += clicks * np.exp(-t / np.float32(0.012)) * np.float32(0.18)
+        local_force = force * float(rng.uniform(0.94, 1.06))
         start = index * spacing
-        result[start : start + hit_n] += hit * np.float32(local_force)
-    return RenderedSound(_normalize(_fade_out(result, context.sample_rate, 0.03)), context.sample_rate, spec)
+        result[start : start + hit_size] += hit * np.float32(local_force)
+
+    result = _fade_out(result, context.sample_rate, 0.03)
+    return RenderedSound(_limit_peak(result), context.sample_rate, spec)
 
 
 def phone_ring(spec: SfxSpec, context: RenderContext) -> RenderedSound:
@@ -113,27 +157,47 @@ def phone_ring(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     style = choice(params, "style", "classic", {"classic", "electronic"})
     count = integer(params, "count", 1, minimum=1, maximum=12)
     interval = number(params, "interval", 1.15, minimum=0.25, maximum=5.0)
-    rng = _rng(spec)
     ring_duration = 0.62 if style == "classic" else 0.42
     n = int(ring_duration * context.sample_rate)
     t = np.arange(n, dtype=np.float32) / np.float32(context.sample_rate)
-    if style == "classic":
-        carrier = 0.62 * np.sin(2 * np.pi * 440.0 * t) + 0.38 * np.sin(2 * np.pi * 480.0 * t)
-        wobble = 0.72 + 0.28 * np.sin(2 * np.pi * 20.0 * t)
-        ring = carrier * wobble
-    else:
-        carrier = np.sin(2 * np.pi * 880.0 * t) + 0.45 * np.sin(2 * np.pi * 1320.0 * t)
-        gate = (np.sin(2 * np.pi * 7.0 * t) > -0.15).astype(np.float32)
-        ring = carrier * gate
-    ring = np.asarray(ring, dtype=np.float32) * np.float32(rng.uniform(0.96, 1.0))
-    ring = _fade_out(_normalize(ring), context.sample_rate, 0.04)
     spacing = int(interval * context.sample_rate)
-    total = spacing * (count - 1) + ring.size
+    total = spacing * (count - 1) + n
     result = np.zeros(total, dtype=np.float32)
+
     for index in range(count):
+        rng = _rng(spec, index)
+        level = float(rng.uniform(0.9, 1.0))
+        phase = float(rng.uniform(-0.15, 0.15))
+        drift = float(rng.uniform(-0.5, 0.5))
+        if style == "classic":
+            frequency_a = float(rng.uniform(436.0, 444.0))
+            frequency_b = float(rng.uniform(476.0, 484.0))
+            carrier = 0.62 * np.sin(2.0 * math.pi * (frequency_a * t + 0.5 * drift * t * t) + phase)
+            carrier += 0.38 * np.sin(
+                2.0 * math.pi * (frequency_b * t + 0.5 * drift * t * t) - phase
+            )
+            wobble_rate = float(rng.uniform(19.0, 21.0))
+            modulation = 0.78 + 0.22 * np.sin(2.0 * math.pi * wobble_rate * t + phase)
+            ring = np.asarray(carrier * modulation, dtype=np.float32)
+        else:
+            frequency_a = float(rng.uniform(868.0, 892.0))
+            frequency_b = float(rng.uniform(1300.0, 1340.0))
+            carrier = np.sin(2.0 * math.pi * frequency_a * t + phase)
+            carrier += 0.45 * np.sin(2.0 * math.pi * frequency_b * t - phase)
+            pulse_rate = float(rng.uniform(6.6, 7.4))
+            duty = float(rng.uniform(-0.19, -0.11))
+            gate = (np.sin(2.0 * math.pi * pulse_rate * t + phase) > duty).astype(np.float32)
+            ring = np.asarray(carrier * gate, dtype=np.float32)
+
+        attack = min(n, max(1, int(0.012 * context.sample_rate)))
+        release = min(n, max(1, int(0.035 * context.sample_rate)))
+        envelope = np.ones(n, dtype=np.float32)
+        envelope[:attack] = np.linspace(0.0, 1.0, attack, dtype=np.float32)
+        envelope[-release:] *= np.linspace(1.0, 0.0, release, dtype=np.float32)
+        ring = np.asarray(ring, dtype=np.float32) * envelope * np.float32(0.62 * level)
         start = index * spacing
-        result[start : start + ring.size] += ring
-    return RenderedSound(_normalize(result), context.sample_rate, spec)
+        result[start : start + n] += ring
+    return RenderedSound(_limit_peak(result), context.sample_rate, spec)
 
 
 def door_open(spec: SfxSpec, context: RenderContext) -> RenderedSound:
@@ -145,17 +209,52 @@ def door_open(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     rng = _rng(spec)
     n = int(duration * context.sample_rate)
     t = np.arange(n, dtype=np.float32) / np.float32(context.sample_rate)
-    start_f = 155.0 if material == "wood" else 260.0
-    end_f = 380.0 if material == "wood" else 720.0
-    phase = 2.0 * np.pi * (start_f * t + 0.5 * (end_f - start_f) / duration * t * t)
-    envelope = np.sin(np.pi * np.clip(t / duration, 0.0, 1.0)) ** 1.4
-    squeak = np.sin(phase).astype(np.float32) * envelope.astype(np.float32)
-    texture = rng.normal(0.0, 1.0, n).astype(np.float32)
-    texture *= (0.08 if material == "wood" else 0.05) * envelope.astype(np.float32)
-    handle_n = min(n, int(0.09 * context.sample_rate))
-    handle = np.zeros(n, dtype=np.float32)
-    handle[:handle_n] = rng.normal(0.0, 1.0, handle_n).astype(np.float32) * np.linspace(
-        0.45, 0.0, handle_n, dtype=np.float32
+    progress = np.clip(t / np.float32(duration), 0.0, 1.0)
+    easing = {"slow": 1.25, "normal": 1.0, "fast": 0.78}[speed]
+    motion = progress**easing
+    start_frequency = 155.0 if material == "wood" else 260.0
+    end_frequency = 380.0 if material == "wood" else 720.0
+    phase = (
+        2.0
+        * math.pi
+        * (start_frequency * t + 0.5 * (end_frequency - start_frequency) / duration * t * t)
     )
-    result = squeak * np.float32(creak) + texture + handle
-    return RenderedSound(_normalize(_fade_out(result, context.sample_rate, 0.05)), context.sample_rate, spec)
+    friction = 0.78 + 0.22 * np.sin(2.0 * math.pi * (3.1 if speed == "slow" else 4.8) * t)
+    motion_envelope = np.sin(np.pi * motion) ** 1.25
+    hinge_tone = np.sin(phase).astype(np.float32) * motion_envelope.astype(np.float32)
+    hinge_tone *= friction.astype(np.float32) * np.float32(0.48 * creak)
+
+    noise = rng.normal(0.0, 1.0, n).astype(np.float32)
+    texture_level = 0.07 if material == "wood" else 0.1
+    texture = noise * motion_envelope.astype(np.float32) * np.float32(texture_level)
+    hinge_friction = noise * motion_envelope.astype(np.float32) * np.float32(0.035 * creak)
+
+    # A latch/clunk at the start and a smaller movement stop near the end.
+    handle = np.zeros(n, dtype=np.float32)
+    handle_n = min(n, max(1, int(0.09 * context.sample_rate)))
+    handle_noise = rng.normal(0.0, 1.0, handle_n).astype(np.float32)
+    handle_env = np.exp(
+        -np.arange(handle_n, dtype=np.float32) / np.float32(0.012 * context.sample_rate)
+    )
+    handle[:handle_n] += handle_noise * handle_env * np.float32(0.15)
+    handle[:handle_n] += (
+        np.sin(
+            np.float32(2.0 * math.pi * (170.0 if material == "wood" else 290.0))
+            * np.arange(handle_n, dtype=np.float32)
+            / np.float32(context.sample_rate)
+        )
+        * handle_env
+        * np.float32(0.2)
+    )
+
+    stop_n = min(n, max(1, int(0.055 * context.sample_rate)))
+    stop_start = max(0, n - stop_n - int(0.04 * context.sample_rate))
+    stop_noise = rng.normal(0.0, 1.0, stop_n).astype(np.float32)
+    stop_env = np.exp(
+        -np.arange(stop_n, dtype=np.float32) / np.float32(0.009 * context.sample_rate)
+    )
+    handle[stop_start : stop_start + stop_n] += stop_noise * stop_env * np.float32(0.1)
+
+    result = hinge_tone + texture + hinge_friction + handle
+    result = _fade_out(result.astype(np.float32), context.sample_rate, 0.05)
+    return RenderedSound(_limit_peak(result), context.sample_rate, spec)
