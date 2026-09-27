@@ -49,11 +49,22 @@ _BUILTIN_CATALOG: dict[str, dict[str, Any]] = {
         },
     },
     "door.open": {
-        "description": "A simple procedural door opening/creak.",
+        "description": "Open a generated door model with latch, hinge friction, and body resonance.",
         "parameters": {
             "material": {"type": "enum", "values": ["wood", "metal"], "default": "wood"},
             "speed": {"type": "enum", "values": ["slow", "normal", "fast"], "default": "normal"},
             "creak": {"type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.65},
+            "force": {"type": "number", "minimum": 0.05, "maximum": 1.0, "default": 0.45},
+            "seed": {"type": "integer", "required": False},
+        },
+    },
+    "door.close": {
+        "description": "Close a generated door model with hinge motion, frame impact, and latch catch.",
+        "parameters": {
+            "material": {"type": "enum", "values": ["wood", "metal"], "default": "wood"},
+            "speed": {"type": "enum", "values": ["slow", "normal", "fast"], "default": "normal"},
+            "creak": {"type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.25},
+            "force": {"type": "number", "minimum": 0.05, "maximum": 1.0, "default": 0.65},
             "seed": {"type": "integer", "required": False},
         },
     },

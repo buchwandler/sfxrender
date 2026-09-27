@@ -35,6 +35,7 @@ def test_builtin_effects_render() -> None:
         "sfx:footsteps.walk?surface=gravel&count=4&seed=2",
         "sfx:phone.ring?style=classic&count=2&seed=3",
         "sfx:door.open?material=wood&speed=slow&seed=4",
+        "sfx:door.close?material=wood&speed=normal&force=0.7&seed=5",
     ]
     for uri in uris:
         sound = renderer.render_uri(uri)

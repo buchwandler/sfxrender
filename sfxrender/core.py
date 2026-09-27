@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from .procedural import door_open, footsteps, knock, phone_ring
+from .procedural import door_close, door_open, footsteps, knock, phone_ring
 from .types import RenderContext, RenderedSound, SfxSpec
 from .uri import parse_sfx_uri
 
@@ -23,6 +23,7 @@ class SFXRenderer:
             "footsteps.walk": footsteps,
             "phone.ring": phone_ring,
             "door.open": door_open,
+            "door.close": door_close,
         }
 
     @property

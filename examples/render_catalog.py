@@ -41,6 +41,10 @@ CATALOG_ITEMS = (
         "08-door-metal-fast.wav",
         "sfx:door.open?material=metal&speed=fast&creak=0.55&seed=32",
     ),
+    (
+        "09-door-close-wood-normal.wav",
+        "sfx:door.close?material=wood&speed=normal&force=0.7&creak=0.2&seed=31",
+    ),
 )
 
 

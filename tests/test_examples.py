@@ -24,6 +24,7 @@ def test_examples_write_reproducible_wavs_only_to_requested_directory(tmp_path: 
             "06-phone-electronic.wav",
             "07-door-wood-slow.wav",
             "08-door-metal-fast.wav",
+            "09-door-close-wood-normal.wav",
         ],
         "audiobook_scene.py": ["audiobook-scene-arrival.wav"],
         "parameter_gallery.py": [
@@ -43,6 +44,17 @@ def test_examples_write_reproducible_wavs_only_to_requested_directory(tmp_path: 
             "knock-metal.wav",
             "foley-footsteps-showcase.wav",
             "foley-quality-showcase.wav",
+        ],
+        "door_quality_gallery.py": [
+            "01-door-open-wood-slow-creaky.wav",
+            "02-door-open-wood-normal.wav",
+            "03-door-open-wood-fast.wav",
+            "04-door-open-metal-normal.wav",
+            "05-door-close-wood-slow.wav",
+            "06-door-close-wood-normal.wav",
+            "07-door-close-wood-fast-hard.wav",
+            "08-door-close-metal-normal.wav",
+            "door-quality-showcase.wav",
         ],
     }
     root_wavs_before = set(ROOT.glob("*.wav"))
@@ -118,3 +130,35 @@ def test_analyze_foley_writes_deterministic_metrics_to_requested_directory(
     ):
         assert metric in content.splitlines()[0]
     assert set(ROOT.glob("*.wav")) == root_wavs_before
+
+
+def test_analyze_doors_writes_waveform_and_physical_metrics(tmp_path: Path) -> None:
+    first_dir = tmp_path / "doors-analysis"
+    second_dir = tmp_path / "repeat-doors-analysis"
+    _run_example("analyze_doors.py", first_dir)
+    _run_example("analyze_doors.py", second_dir)
+    report = first_dir / "door-analysis.txt"
+    repeated = second_dir / "door-analysis.txt"
+    assert report.is_file()
+    assert report.read_bytes() == repeated.read_bytes()
+    content = report.read_text(encoding="utf-8")
+    for label in ("open-wood-slow", "close-wood-slow", "close-metal-normal"):
+        assert label in content
+    for metric in (
+        "spectral_centroid_hz",
+        "spectral_flatness",
+        "fraction_40_250_hz",
+        "fraction_5000_8000_hz",
+        "early_rms",
+        "motion_rms",
+        "terminal_rms",
+        "frame_rms_p25",
+        "frame_rms_p90",
+        "intermittency_ratio",
+        "panel_mode_count",
+        "frame_mode_count",
+        "hinge_region_count",
+        "hinge_f0_min_hz",
+        "hinge_f0_max_hz",
+    ):
+        assert metric in content.splitlines()[0]

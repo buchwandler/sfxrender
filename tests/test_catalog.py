@@ -5,6 +5,8 @@ def test_catalog_contains_builtin_effects() -> None:
     values = catalog()
     assert "impact.knock" in values
     assert "footsteps.walk" in values
+    assert "door.open" in values
+    assert "door.close" in values
     assert "parameters" in values["impact.knock"]
 
 

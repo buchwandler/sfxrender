@@ -6,6 +6,7 @@ import math
 
 import numpy as np
 
+from ._doors import generate_door_model, render_close, render_open
 from ._dsp import (
     asymmetric_pulse,
     bandpass_noise,
@@ -341,56 +342,32 @@ def door_open(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     material = choice(params, "material", "wood", {"wood", "metal"})
     speed = choice(params, "speed", "normal", {"slow", "normal", "fast"})
     creak = number(params, "creak", 0.65, minimum=0.0, maximum=1.0)
-    duration = {"slow": 2.4, "normal": 1.5, "fast": 0.85}[speed]
-    rng = _rng(spec)
-    n = int(duration * context.sample_rate)
-    t = np.arange(n, dtype=np.float32) / np.float32(context.sample_rate)
-    progress = np.clip(t / np.float32(duration), 0.0, 1.0)
-    easing = {"slow": 1.25, "normal": 1.0, "fast": 0.78}[speed]
-    motion = progress**easing
-    start_frequency = 155.0 if material == "wood" else 260.0
-    end_frequency = 380.0 if material == "wood" else 720.0
-    phase = (
-        2.0
-        * math.pi
-        * (start_frequency * t + 0.5 * (end_frequency - start_frequency) / duration * t * t)
+    force = number(params, "force", 0.45, minimum=0.05, maximum=1.0)
+    seed = spec.seed if spec.seed is not None else 0
+    model = generate_door_model(material=material, seed=seed, sample_rate=context.sample_rate)
+    samples = render_open(
+        model=model,
+        speed=speed,
+        creak=creak,
+        force=force,
+        sample_rate=context.sample_rate,
     )
-    friction = 0.78 + 0.22 * np.sin(2.0 * math.pi * (3.1 if speed == "slow" else 4.8) * t)
-    motion_envelope = np.sin(np.pi * motion) ** 1.25
-    hinge_tone = np.sin(phase).astype(np.float32) * motion_envelope.astype(np.float32)
-    hinge_tone *= friction.astype(np.float32) * np.float32(0.48 * creak)
+    return RenderedSound(samples, context.sample_rate, spec)
 
-    noise = rng.normal(0.0, 1.0, n).astype(np.float32)
-    texture_level = 0.07 if material == "wood" else 0.1
-    texture = noise * motion_envelope.astype(np.float32) * np.float32(texture_level)
-    hinge_friction = noise * motion_envelope.astype(np.float32) * np.float32(0.035 * creak)
 
-    # A latch/clunk at the start and a smaller movement stop near the end.
-    handle = np.zeros(n, dtype=np.float32)
-    handle_n = min(n, max(1, int(0.09 * context.sample_rate)))
-    handle_noise = rng.normal(0.0, 1.0, handle_n).astype(np.float32)
-    handle_env = np.exp(
-        -np.arange(handle_n, dtype=np.float32) / np.float32(0.012 * context.sample_rate)
+def door_close(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    params = spec.parameters
+    material = choice(params, "material", "wood", {"wood", "metal"})
+    speed = choice(params, "speed", "normal", {"slow", "normal", "fast"})
+    creak = number(params, "creak", 0.25, minimum=0.0, maximum=1.0)
+    force = number(params, "force", 0.65, minimum=0.05, maximum=1.0)
+    seed = spec.seed if spec.seed is not None else 0
+    model = generate_door_model(material=material, seed=seed, sample_rate=context.sample_rate)
+    samples = render_close(
+        model=model,
+        speed=speed,
+        creak=creak,
+        force=force,
+        sample_rate=context.sample_rate,
     )
-    handle[:handle_n] += handle_noise * handle_env * np.float32(0.15)
-    handle[:handle_n] += (
-        np.sin(
-            np.float32(2.0 * math.pi * (170.0 if material == "wood" else 290.0))
-            * np.arange(handle_n, dtype=np.float32)
-            / np.float32(context.sample_rate)
-        )
-        * handle_env
-        * np.float32(0.2)
-    )
-
-    stop_n = min(n, max(1, int(0.055 * context.sample_rate)))
-    stop_start = max(0, n - stop_n - int(0.04 * context.sample_rate))
-    stop_noise = rng.normal(0.0, 1.0, stop_n).astype(np.float32)
-    stop_env = np.exp(
-        -np.arange(stop_n, dtype=np.float32) / np.float32(0.009 * context.sample_rate)
-    )
-    handle[stop_start : stop_start + stop_n] += stop_noise * stop_env * np.float32(0.1)
-
-    result = hinge_tone + texture + hinge_friction + handle
-    result = _fade_out(result.astype(np.float32), context.sample_rate, 0.05)
-    return RenderedSound(_limit_peak(result), context.sample_rate, spec)
+    return RenderedSound(samples, context.sample_rate, spec)
