@@ -7,14 +7,13 @@ import math
 import numpy as np
 
 from ._doors import generate_door_model, render_close, render_open
-from ._dsp import (
-    asymmetric_pulse,
-    bandpass_noise,
-    impact_excitation,
-    modal_bank,
-)
 from ._footsteps import aggregate_footstep, solid_footstep
 from ._params import choice, integer, number
+from ._physics.contact import ImpactContact, impact_force
+from ._physics.geometry import rectangular_plate_modes
+from ._physics.physical_impacts import render_physical_impact
+from ._physics.presets import KNOCK_IMPACTORS, KNOCK_OBJECTS, OBJECT_PRESETS
+from ._physics.rng import RandomStream, event_rng
 from .types import FloatAudio, RenderContext, RenderedSound, SfxSpec
 
 
@@ -72,132 +71,81 @@ def _event_starts(
 
 def _knock_hit(
     *,
+    material_name: str,
+    impactor_name: str,
+    force: float,
     sample_rate: int,
-    rng: np.random.Generator,
-    modes: tuple[tuple[float, float, float], ...],
-    contact_brightness: float,
-    contact_gain: float,
-    diffusion_brightness: float,
-    diffusion_gain: float,
+    seed: int,
+    event_index: int,
 ) -> FloatAudio:
-    """Drive a material-specific modal response with a short broadband impact."""
-    longest_decay = max(decay for _, decay, _ in modes)
-    duration = max(0.24, longest_decay * 5.0 + 0.055)
-    size = max(1, round(duration * sample_rate))
-    time = np.arange(size, dtype=np.float32) / np.float32(sample_rate)
-    force_envelope = asymmetric_pulse(
-        size,
-        sample_rate,
-        attack_s=float(rng.uniform(0.00022, 0.00055)),
-        decay_s=float(rng.uniform(0.004, 0.010)),
-    )
-    envelope_peak = float(np.max(force_envelope)) if force_envelope.size else 0.0
-    if envelope_peak > 0.0:
-        force_envelope /= np.float32(envelope_peak)
-    excitation = impact_excitation(
+    """Create one stable object-mode response to a compliant physical impact."""
+    object_preset = OBJECT_PRESETS[KNOCK_OBJECTS[material_name]]
+    impactor = KNOCK_IMPACTORS[impactor_name]
+    position_rng = event_rng(seed, event_index, RandomStream.POSITION)
+    variation_rng = event_rng(seed, event_index, RandomStream.VARIATION)
+    centers = {
+        "small_wood_board": (0.53, 0.48),
+        "oak_door": (0.77, 0.54),
+        "drywall_panel": (0.46, 0.56),
+        "steel_sheet": (0.58, 0.52),
+    }
+    center_x, center_y = centers[object_preset.name]
+    contact_x = float(np.clip(center_x + position_rng.normal(0.0, 0.045), 0.08, 0.92))
+    contact_y = float(np.clip(center_y + position_rng.normal(0.0, 0.055), 0.08, 0.92))
+    modes = rectangular_plate_modes(
+        object_preset.geometry,
+        object_preset.material,
         sample_rate=sample_rate,
-        duration=size,
-        force_envelope=force_envelope,
-        hardness=contact_brightness,
-        brightness=contact_brightness,
-        rng=rng,
+        max_modes=32,
+        contact_x=contact_x,
+        contact_y=contact_y,
     )
-    hit = excitation * np.float32(contact_gain * rng.uniform(0.88, 1.12))
-    modes_layer = modal_bank(
-        excitation,
-        sample_rate,
-        rng,
+    stiffness = impactor.stiffness * (0.55 + 0.65 * object_preset.material.contact_hardness)
+    restitution = math.sqrt(impactor.restitution * object_preset.material.restitution)
+    contact = ImpactContact(
+        effective_mass_kg=impactor.effective_mass_kg,
+        stiffness=stiffness,
+        exponent=1.5,
+        restitution=restitution,
+    )
+    velocity = (0.15 + 1.85 * force) * float(variation_rng.uniform(0.97, 1.03))
+    trace = impact_force(
+        contact=contact,
+        velocity_m_s=velocity,
+        sample_rate=sample_rate,
+        oversample=4,
+    )
+    texture_rng = event_rng(seed, event_index, RandomStream.ROUGHNESS)
+    body_mass = (
+        object_preset.material.density_kg_m3
+        * object_preset.geometry.width_m
+        * object_preset.geometry.height_m
+        * object_preset.geometry.thickness_m
+    )
+    output_gain = 20.0 + 12.0 / max(body_mass, 0.2)
+    hit = render_physical_impact(
+        trace,
         modes,
-        frequency_jitter=0.025,
-        decay_jitter=0.10,
+        sample_rate=sample_rate,
+        rng=texture_rng,
+        microscopic_gain=impactor.microscopic_gain
+        * (0.5 + object_preset.material.roughness_rms_m / 5e-6),
+        output_gain=output_gain,
     )
-    hit += modes_layer * np.float32(0.58)
-    diffusion_cutoff = 1_600.0 if diffusion_brightness < 0.5 else 3_800.0
-    diffusion_noise = bandpass_noise(
-        rng,
-        size,
-        sample_rate,
-        max(180.0, diffusion_cutoff * 0.32),
-        min(diffusion_cutoff * 2.1, sample_rate * 0.47),
-    )
-    diffusion_decay = 0.075 if longest_decay < 0.12 else 0.11
-    diffusion_envelope = np.exp(-time / np.float32(diffusion_decay))
-    diffusion_envelope *= 1.0 - np.exp(-time / np.float32(0.0012))
-    slow_modulation = 0.96 + 0.04 * np.sin(
-        np.float32(2.0 * math.pi * float(rng.uniform(17.0, 29.0))) * time
-        + np.float32(rng.uniform(-math.pi, math.pi))
-    )
-    hit += (
-        diffusion_noise
-        * diffusion_envelope
-        * slow_modulation.astype(np.float32)
-        * np.float32(diffusion_gain)
-    )
-    if rng.random() < 0.24:
-        tap_size = max(1, round(0.014 * sample_rate))
-        tap_force = asymmetric_pulse(
-            tap_size,
-            sample_rate,
-            attack_s=0.0003,
-            decay_s=0.004,
-            amplitude=float(rng.uniform(0.12, 0.22)),
-        )
-        tap = impact_excitation(
-            sample_rate=sample_rate,
-            duration=tap_size,
-            force_envelope=tap_force,
-            hardness=contact_brightness,
-            brightness=min(0.95, contact_brightness + 0.15),
-            rng=rng,
-        ) * np.float32(contact_gain)
-        _mix_at(hit, tap, round(float(rng.uniform(0.012, 0.032)) * sample_rate))
-    return np.asarray(hit, dtype=np.float32)
+    minimum_size = round(0.20 * sample_rate) if object_preset.name == "small_wood_board" else 0
+    if hit.size < minimum_size:
+        hit = np.pad(hit, (0, minimum_size - hit.size)).astype(np.float32)
+    return hit
 
 
 def knock(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     params = spec.parameters
     material = choice(params, "material", "wood", {"wood", "oak", "metal", "wall"})
+    impactor = choice(params, "impactor", "knuckle", set(KNOCK_IMPACTORS))
     count = integer(params, "count", 1, minimum=1, maximum=16)
     force = number(params, "force", 0.65, minimum=0.05, maximum=1.0)
     interval = number(params, "interval", 0.22, minimum=0.08, maximum=2.0)
-    modes_by_material: dict[str, tuple[tuple[float, float, float], ...]] = {
-        "wood": (
-            (115.0, 0.070, 0.28),
-            (185.0, 0.090, 0.30),
-            (315.0, 0.065, 0.25),
-            (515.0, 0.050, 0.20),
-            (820.0, 0.030, 0.15),
-            (1250.0, 0.018, 0.09),
-        ),
-        "oak": (
-            (90.0, 0.095, 0.32),
-            (150.0, 0.115, 0.30),
-            (255.0, 0.085, 0.25),
-            (410.0, 0.060, 0.19),
-            (680.0, 0.038, 0.14),
-            (1080.0, 0.022, 0.08),
-        ),
-        "wall": (
-            (75.0, 0.035, 0.26),
-            (125.0, 0.045, 0.22),
-            (230.0, 0.030, 0.18),
-            (390.0, 0.022, 0.15),
-            (650.0, 0.015, 0.10),
-        ),
-        "metal": (
-            (260.0, 0.100, 0.20),
-            (430.0, 0.145, 0.19),
-            (710.0, 0.160, 0.17),
-            (1180.0, 0.130, 0.15),
-            (1900.0, 0.095, 0.13),
-            (3000.0, 0.055, 0.10),
-        ),
-    }
-    contact_brightness = {"wood": 0.42, "oak": 0.36, "wall": 0.58, "metal": 0.82}[material]
-    contact_gain = {"wood": 0.18, "oak": 0.17, "wall": 0.14, "metal": 0.27}[material]
-    diffusion_brightness = {"wood": 0.36, "oak": 0.30, "wall": 0.22, "metal": 0.70}[material]
-    diffusion_gain = {"wood": 0.11, "oak": 0.12, "wall": 0.11, "metal": 0.16}[material]
-    modes = modes_by_material[material]
+    seed = spec.seed if spec.seed is not None else 0
     starts = _event_starts(
         count=count,
         interval=interval,
@@ -205,23 +153,21 @@ def knock(spec: SfxSpec, context: RenderContext) -> RenderedSound:
         spec=spec,
         jitter_fraction=0.008,
     )
-    longest_decay = max(decay for _, decay, _ in modes)
-    hit_size = max(1, round(max(0.24, longest_decay * 5.0 + 0.055) * context.sample_rate))
-    total = starts[-1] + hit_size
-    result = np.zeros(total, dtype=np.float32)
-    for index, start in enumerate(starts):
-        rng = _rng(spec, index)
-        hit = _knock_hit(
+    hits = [
+        _knock_hit(
+            material_name=material,
+            impactor_name=impactor,
+            force=force,
             sample_rate=context.sample_rate,
-            rng=rng,
-            modes=modes,
-            contact_brightness=contact_brightness,
-            contact_gain=contact_gain,
-            diffusion_brightness=diffusion_brightness,
-            diffusion_gain=diffusion_gain,
+            seed=seed,
+            event_index=index,
         )
-        level = force * float(rng.uniform(0.94, 1.04))
-        _mix_at(result, hit * np.float32(level), start)
+        for index in range(count)
+    ]
+    total = max(start + hit.size for start, hit in zip(starts, hits, strict=True))
+    result = np.zeros(total, dtype=np.float32)
+    for start, hit in zip(starts, hits, strict=True):
+        _mix_at(result, hit, start)
     return RenderedSound(_limit_peak(result), context.sample_rate, spec)
 
 

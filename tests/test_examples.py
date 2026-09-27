@@ -38,8 +38,12 @@ def test_examples_write_reproducible_wavs_only_to_requested_directory(tmp_path: 
             "04-footsteps-stone-heels.wav",
             "05-footsteps-carpet-barefoot.wav",
             "06-footsteps-gravel-boots.wav",
+            "07-footsteps-wood-boots-light-load.wav",
+            "08-footsteps-wood-boots-heavy-load.wav",
             "knock-wood.wav",
             "knock-oak.wav",
+            "knock-oak-fingertip.wav",
+            "knock-oak-metal-impactor.wav",
             "knock-wall.wav",
             "knock-metal.wav",
             "foley-footsteps-showcase.wav",
@@ -47,13 +51,15 @@ def test_examples_write_reproducible_wavs_only_to_requested_directory(tmp_path: 
         ],
         "door_quality_gallery.py": [
             "01-door-open-wood-slow-creaky.wav",
-            "02-door-open-wood-normal.wav",
-            "03-door-open-wood-fast.wav",
-            "04-door-open-metal-normal.wav",
-            "05-door-close-wood-slow.wav",
-            "06-door-close-wood-normal.wav",
-            "07-door-close-wood-fast-hard.wav",
-            "08-door-close-metal-normal.wav",
+            "02-door-open-wood-slow-low-creak.wav",
+            "03-door-open-wood-normal.wav",
+            "04-door-open-wood-fast.wav",
+            "05-door-open-metal-normal.wav",
+            "06-door-close-wood-slow.wav",
+            "07-door-close-wood-slow-hard.wav",
+            "08-door-close-wood-normal.wav",
+            "09-door-close-wood-fast-hard.wav",
+            "10-door-close-metal-normal.wav",
             "door-quality-showcase.wav",
         ],
     }
@@ -89,11 +95,11 @@ def test_examples_write_reproducible_wavs_only_to_requested_directory(tmp_path: 
         assert audio.getnframes() == individual_frames + gap_frames * (len(gallery_names) - 3)
 
     footstep_frames = 0
-    for filename in gallery_names[:6]:
+    for filename in gallery_names[:8]:
         with wave.open(str(gallery_dir / filename), "rb") as audio:
             footstep_frames += audio.getnframes()
     with wave.open(str(gallery_dir / gallery_names[-2]), "rb") as audio:
-        assert audio.getnframes() == footstep_frames + gap_frames * 5
+        assert audio.getnframes() == footstep_frames + gap_frames * 7
 
 
 def test_analyze_foley_writes_deterministic_metrics_to_requested_directory(
@@ -114,12 +120,21 @@ def test_analyze_foley_writes_deterministic_metrics_to_requested_directory(
         "wood-shoes",
         "stone-shoes",
         "stone-heels",
+        "wood-boots-light-load",
+        "wood-boots-heavy-load",
         "carpet-barefoot",
         "gravel-boots",
     ):
         assert label in content
     for metric in (
         "duration_s",
+        "onset_time_s",
+        "attack_duration_s",
+        "active_duration_s",
+        "event_density_hz",
+        "spectral_flux",
+        "dominant_peak_hz",
+        "dominant_peak_decay_s",
         "peak",
         "rms",
         "centroid_hz",
@@ -142,10 +157,26 @@ def test_analyze_doors_writes_waveform_and_physical_metrics(tmp_path: Path) -> N
     assert report.is_file()
     assert report.read_bytes() == repeated.read_bytes()
     content = report.read_text(encoding="utf-8")
-    for label in ("open-wood-slow", "close-wood-slow", "close-metal-normal"):
+    for label in (
+        "open-wood-slow",
+        "open-wood-slow-low-creak",
+        "close-wood-slow",
+        "close-wood-slow-hard",
+        "close-metal-normal",
+    ):
         assert label in content
     for metric in (
         "spectral_centroid_hz",
+        "onset_time_s",
+        "attack_duration_s",
+        "active_duration_s",
+        "event_density_hz",
+        "spectral_flux",
+        "centroid_early_hz",
+        "centroid_middle_hz",
+        "centroid_late_hz",
+        "dominant_peak_hz",
+        "dominant_peak_decay_s",
         "spectral_flatness",
         "fraction_40_250_hz",
         "fraction_5000_8000_hz",

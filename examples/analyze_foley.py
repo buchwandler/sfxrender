@@ -2,17 +2,31 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import numpy as np
 
 from sfxrender import SFXRenderer
 
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from tools._reference_audio import analyze_signal
+
 ANALYSIS_CASES = (
     ("wood-boots", "sfx:footsteps.walk?surface=wood&footwear=boots&count=1&force=0.58&seed=501"),
-    ("wood-shoes", "sfx:footsteps.walk?surface=wood&footwear=shoes&count=1&force=0.58&seed=502"),
+    ("wood-shoes", "sfx:footsteps.walk?surface=wood&footwear=shoes&count=1&force=0.58&seed=501"),
     ("stone-shoes", "sfx:footsteps.walk?surface=stone&footwear=shoes&count=1&force=0.58&seed=503"),
-    ("stone-heels", "sfx:footsteps.walk?surface=stone&footwear=heels&count=1&force=0.58&seed=504"),
+    ("stone-heels", "sfx:footsteps.walk?surface=stone&footwear=heels&count=1&force=0.58&seed=503"),
+    (
+        "wood-boots-light-load",
+        "sfx:footsteps.walk?surface=wood&footwear=boots&count=1&force=0.32&seed=507",
+    ),
+    (
+        "wood-boots-heavy-load",
+        "sfx:footsteps.walk?surface=wood&footwear=boots&count=1&force=0.9&seed=507",
+    ),
     (
         "carpet-barefoot",
         "sfx:footsteps.walk?surface=carpet&footwear=barefoot&count=1&force=0.58&seed=505",
@@ -37,6 +51,10 @@ def _band_fraction(
 
 
 def _measure(samples: np.ndarray, sample_rate: int) -> dict[str, float]:
+    analysis = analyze_signal(samples, sample_rate)
+    peaks = analysis["dominant_peaks"]
+    dominant_peak = max(peaks, key=lambda peak: float(peak["relative_amplitude"]), default=None)
+    centroid_trajectory = analysis["spectral_centroid_trajectory_hz"]
     windowed = samples * np.hanning(samples.size)
     power = np.square(np.abs(np.fft.rfft(windowed)))
     frequencies = np.fft.rfftfreq(samples.size, 1.0 / sample_rate)
@@ -44,6 +62,16 @@ def _measure(samples: np.ndarray, sample_rate: int) -> dict[str, float]:
     centroid = float(np.sum(frequencies * power) / total) if total > 0.0 else 0.0
     return {
         "duration_s": samples.size / float(sample_rate),
+        "onset_time_s": float(analysis["onset_time_s"]),
+        "attack_duration_s": float(analysis["attack_duration_s"]),
+        "active_duration_s": float(analysis["active_duration_s"]),
+        "event_density_hz": float(analysis["event_density_hz"]),
+        "spectral_flux": float(analysis["spectral_flux"]),
+        "zero_crossing_rate": float(analysis["zero_crossing_rate"]),
+        "centroid_early_hz": float(centroid_trajectory[0]),
+        "centroid_late_hz": float(centroid_trajectory[-1]),
+        "dominant_peak_hz": float(dominant_peak["frequency_hz"]) if dominant_peak else 0.0,
+        "dominant_peak_decay_s": float(dominant_peak["decay_s"] or 0.0) if dominant_peak else 0.0,
         "peak": float(np.max(np.abs(samples))) if samples.size else 0.0,
         "rms": _rms(samples),
         "centroid_hz": centroid,

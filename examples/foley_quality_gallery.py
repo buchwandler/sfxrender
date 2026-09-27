@@ -15,7 +15,7 @@ FOLEY_ITEMS = (
     ),
     (
         "02-footsteps-wood-shoes.wav",
-        "sfx:footsteps.walk?surface=wood&footwear=shoes&count=6&force=0.62&interval=0.50&seed=402",
+        "sfx:footsteps.walk?surface=wood&footwear=shoes&count=6&force=0.62&interval=0.50&seed=401",
     ),
     (
         "03-footsteps-stone-shoes.wav",
@@ -23,7 +23,7 @@ FOLEY_ITEMS = (
     ),
     (
         "04-footsteps-stone-heels.wav",
-        "sfx:footsteps.walk?surface=stone&footwear=heels&count=6&force=0.62&interval=0.50&seed=404",
+        "sfx:footsteps.walk?surface=stone&footwear=heels&count=6&force=0.62&interval=0.50&seed=403",
     ),
     (
         "05-footsteps-carpet-barefoot.wav",
@@ -33,8 +33,24 @@ FOLEY_ITEMS = (
         "06-footsteps-gravel-boots.wav",
         "sfx:footsteps.walk?surface=gravel&footwear=boots&count=6&force=0.62&interval=0.50&seed=406",
     ),
+    (
+        "07-footsteps-wood-boots-light-load.wav",
+        "sfx:footsteps.walk?surface=wood&footwear=boots&count=6&force=0.35&interval=0.50&seed=407",
+    ),
+    (
+        "08-footsteps-wood-boots-heavy-load.wav",
+        "sfx:footsteps.walk?surface=wood&footwear=boots&count=6&force=0.9&interval=0.50&seed=407",
+    ),
     ("knock-wood.wav", "sfx:impact.knock?material=wood&count=3&force=0.68&interval=0.34&seed=411"),
-    ("knock-oak.wav", "sfx:impact.knock?material=oak&count=3&force=0.68&interval=0.34&seed=412"),
+    ("knock-oak.wav", "sfx:impact.knock?material=oak&count=3&force=0.68&interval=0.34&seed=411"),
+    (
+        "knock-oak-fingertip.wav",
+        "sfx:impact.knock?material=oak&impactor=fingertip&count=3&force=0.68&interval=0.34&seed=415",
+    ),
+    (
+        "knock-oak-metal-impactor.wav",
+        "sfx:impact.knock?material=oak&impactor=metal_object&count=3&force=0.68&interval=0.34&seed=415",
+    ),
     ("knock-wall.wav", "sfx:impact.knock?material=wall&count=3&force=0.68&interval=0.34&seed=413"),
     (
         "knock-metal.wav",
@@ -81,7 +97,7 @@ def main(output_dir: str | Path | None = None) -> None:
         sound = renderer.render_uri(uri)
         sound.write_wav(destination / filename)
         sounds.append(sound)
-        if index < 6:
+        if index < 8:
             footsteps.append(sound)
         print(f"Rendered {uri} -> {destination / filename}")
     _write_showcase(

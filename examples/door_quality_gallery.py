@@ -14,31 +14,39 @@ DOOR_ITEMS = (
         "sfx:door.open?material=wood&speed=slow&creak=0.75&seed=501",
     ),
     (
-        "02-door-open-wood-normal.wav",
-        "sfx:door.open?material=wood&speed=normal&creak=0.5&seed=502",
+        "02-door-open-wood-slow-low-creak.wav",
+        "sfx:door.open?material=wood&speed=slow&creak=0.1&seed=501",
     ),
     (
-        "03-door-open-wood-fast.wav",
-        "sfx:door.open?material=wood&speed=fast&creak=0.5&seed=503",
+        "03-door-open-wood-normal.wav",
+        "sfx:door.open?material=wood&speed=normal&creak=0.5&seed=501",
     ),
     (
-        "04-door-open-metal-normal.wav",
+        "04-door-open-wood-fast.wav",
+        "sfx:door.open?material=wood&speed=fast&creak=0.5&seed=501",
+    ),
+    (
+        "05-door-open-metal-normal.wav",
         "sfx:door.open?material=metal&speed=normal&creak=0.55&seed=504",
     ),
     (
-        "05-door-close-wood-slow.wav",
+        "06-door-close-wood-slow.wav",
         "sfx:door.close?material=wood&speed=slow&force=0.55&creak=0.25&seed=501",
     ),
     (
-        "06-door-close-wood-normal.wav",
-        "sfx:door.close?material=wood&speed=normal&force=0.65&creak=0.25&seed=505",
+        "07-door-close-wood-slow-hard.wav",
+        "sfx:door.close?material=wood&speed=slow&force=0.9&creak=0.25&seed=501",
     ),
     (
-        "07-door-close-wood-fast-hard.wav",
-        "sfx:door.close?material=wood&speed=fast&force=0.9&creak=0.2&seed=506",
+        "08-door-close-wood-normal.wav",
+        "sfx:door.close?material=wood&speed=normal&force=0.65&creak=0.25&seed=501",
     ),
     (
-        "08-door-close-metal-normal.wav",
+        "09-door-close-wood-fast-hard.wav",
+        "sfx:door.close?material=wood&speed=fast&force=0.9&creak=0.2&seed=501",
+    ),
+    (
+        "10-door-close-metal-normal.wav",
         "sfx:door.close?material=metal&speed=normal&force=0.7&creak=0.3&seed=507",
     ),
 )

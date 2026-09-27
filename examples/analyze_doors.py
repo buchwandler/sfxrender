@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import numpy as np
 
 from sfxrender import SFXRenderer
 from sfxrender._doors import generate_door_model
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from tools._reference_audio import analyze_signal
 
 ANALYSIS_CASES = (
     (
@@ -19,18 +25,26 @@ ANALYSIS_CASES = (
         2.25,
     ),
     (
-        "open-wood-normal",
-        "sfx:door.open?material=wood&speed=normal&creak=0.5&seed=502",
+        "open-wood-slow-low-creak",
+        "sfx:door.open?material=wood&speed=slow&creak=0.1&seed=501",
         "wood",
-        502,
+        501,
+        "open",
+        2.25,
+    ),
+    (
+        "open-wood-normal",
+        "sfx:door.open?material=wood&speed=normal&creak=0.5&seed=501",
+        "wood",
+        501,
         "open",
         1.42,
     ),
     (
         "open-wood-fast",
-        "sfx:door.open?material=wood&speed=fast&creak=0.5&seed=503",
+        "sfx:door.open?material=wood&speed=fast&creak=0.5&seed=501",
         "wood",
-        503,
+        501,
         "open",
         0.78,
     ),
@@ -51,18 +65,26 @@ ANALYSIS_CASES = (
         0.82,
     ),
     (
-        "close-wood-normal",
-        "sfx:door.close?material=wood&speed=normal&force=0.65&creak=0.25&seed=505",
+        "close-wood-slow-hard",
+        "sfx:door.close?material=wood&speed=slow&force=0.9&creak=0.25&seed=501",
         "wood",
-        505,
+        501,
+        "close",
+        0.82,
+    ),
+    (
+        "close-wood-normal",
+        "sfx:door.close?material=wood&speed=normal&force=0.65&creak=0.25&seed=501",
+        "wood",
+        501,
         "close",
         0.46,
     ),
     (
         "close-wood-fast-hard",
-        "sfx:door.close?material=wood&speed=fast&force=0.9&creak=0.2&seed=506",
+        "sfx:door.close?material=wood&speed=fast&force=0.9&creak=0.2&seed=501",
         "wood",
-        506,
+        501,
         "close",
         0.23,
     ),
@@ -79,6 +101,16 @@ ANALYSIS_CASES = (
 
 _METRIC_KEYS = (
     "duration_s",
+    "onset_time_s",
+    "attack_duration_s",
+    "active_duration_s",
+    "event_density_hz",
+    "spectral_flux",
+    "centroid_early_hz",
+    "centroid_middle_hz",
+    "centroid_late_hz",
+    "dominant_peak_hz",
+    "dominant_peak_decay_s",
     "peak",
     "rms",
     "spectral_centroid_hz",
@@ -117,6 +149,10 @@ def _band_fraction(power: np.ndarray, frequencies: np.ndarray, low: float, high:
 def _signal_metrics(
     samples: np.ndarray, sample_rate: int, action: str, motion_duration: float
 ) -> dict[str, float]:
+    features = analyze_signal(samples, sample_rate)
+    trajectory = features["spectral_centroid_trajectory_hz"]
+    peaks = features["dominant_peaks"]
+    dominant_peak = max(peaks, key=lambda peak: float(peak["relative_amplitude"]), default=None)
     windowed = samples * np.hanning(samples.size)
     power = np.square(np.abs(np.fft.rfft(windowed)))
     frequencies = np.fft.rfftfreq(samples.size, 1.0 / sample_rate)
@@ -148,6 +184,16 @@ def _signal_metrics(
         p90 = 0.0
     return {
         "duration_s": samples.size / float(sample_rate),
+        "onset_time_s": float(features["onset_time_s"]),
+        "attack_duration_s": float(features["attack_duration_s"]),
+        "active_duration_s": float(features["active_duration_s"]),
+        "event_density_hz": float(features["event_density_hz"]),
+        "spectral_flux": float(features["spectral_flux"]),
+        "centroid_early_hz": float(trajectory[0]),
+        "centroid_middle_hz": float(trajectory[2]),
+        "centroid_late_hz": float(trajectory[-1]),
+        "dominant_peak_hz": float(dominant_peak["frequency_hz"]) if dominant_peak else 0.0,
+        "dominant_peak_decay_s": float(dominant_peak["decay_s"] or 0.0) if dominant_peak else 0.0,
         "peak": float(np.max(np.abs(samples))) if samples.size else 0.0,
         "rms": _rms(samples),
         "spectral_centroid_hz": centroid,

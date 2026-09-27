@@ -3,16 +3,15 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from functools import lru_cache
 
 import numpy as np
 
 from ._dsp import (
     asymmetric_pulse,
     bandpass_noise,
-    impact_excitation,
     mix_at,
-    modal_bank,
     one_pole_highpass,
     one_pole_lowpass,
 )
@@ -23,6 +22,18 @@ from ._foley_profiles import (
     AggregateSurfaceProfile,
     FootwearProfile,
 )
+from ._physics.contact import ImpactContact, impact_force
+from ._physics.friction import (
+    LuGrePreset,
+    lugre_friction,
+    make_roughness_profile,
+    roughness_velocity,
+)
+from ._physics.geometry import rectangular_plate_modes
+from ._physics.modes import ModeSet
+from ._physics.physical_impacts import render_physical_impact
+from ._physics.presets import FLOOR_OBJECTS, FOOTWEAR_CONTACTS, FootwearContactPreset
+from ._physics.resonator import ModalResonatorBank
 from .types import FloatAudio
 
 
@@ -80,22 +91,192 @@ def _synthetic_grf(
     return grf
 
 
-def _stable_modes(surface_name: str, sample_rate: int) -> tuple[tuple[float, float, float], ...]:
-    """Sample stable base mode frequencies once per material, not per step."""
-    profile = SOLID_SURFACE_PROFILES[surface_name]
-    seeds = {"wood": 17_031, "stone": 28_019, "carpet": 39_011}
-    material_rng = np.random.default_rng(seeds[surface_name])
-    modes: list[tuple[float, float, float]] = []
-    for index, band in enumerate(profile.mode_ranges):
-        copies = 2 if surface_name == "wood" and index < 4 else 1
-        for _ in range(copies):
-            frequency = float(material_rng.uniform(band.low_hz, band.high_hz))
-            if frequency >= sample_rate * 0.46:
-                continue
-            position_gain = float(material_rng.uniform(0.78, 1.16))
-            gain = band.gain * position_gain * profile.resonance_gain
-            modes.append((frequency, band.decay_s * profile.damping, gain))
-    return tuple(modes)
+@lru_cache(maxsize=64)
+def _floor_modes(
+    surface_name: str,
+    sample_rate: int,
+    contact_x: float,
+    contact_y: float,
+) -> ModeSet:
+    """Build stable geometry-derived floor modes at a normalized contact point."""
+    floor = FLOOR_OBJECTS[surface_name]
+    base = rectangular_plate_modes(
+        floor.geometry,
+        floor.material,
+        sample_rate=sample_rate,
+        max_modes=40,
+        contact_x=contact_x,
+        contact_y=contact_y,
+    )
+    return ModeSet(
+        tuple(
+            replace(
+                mode,
+                decay_s=mode.decay_s * floor.mode_decay_scale,
+                input_gain=mode.input_gain * floor.modal_gain,
+                modal_mass_kg=mode.modal_mass_kg * floor.modal_mass_scale,
+            )
+            for mode in base.modes
+        )
+    )
+
+
+def _floor_contact_audio(
+    *,
+    grf: FloatAudio,
+    surface: str,
+    footwear: FootwearProfile,
+    footwear_contact: FootwearContactPreset,
+    rng: np.random.Generator,
+    sample_rate: int,
+) -> tuple[FloatAudio, ModeSet]:
+    size = grf.size
+    floor = FLOOR_OBJECTS[surface]
+    contacts = (
+        (0.0, 0.042, 1.0),
+        (0.032, 0.135, 0.76),
+        (0.105, 0.225, 0.54),
+    )
+    mode_sets = (
+        _floor_modes(surface, sample_rate, 0.20, 0.40),
+        _floor_modes(surface, sample_rate, 0.62, 0.56),
+        _floor_modes(surface, sample_rate, 0.82, 0.68),
+    )
+    max_decay = max(
+        (mode.decay_s for mode_set in mode_sets for mode in mode_set.modes),
+        default=0.04,
+    )
+    tail_samples = round(min(0.55, max(0.12, max_decay * 4.5)) * sample_rate)
+    output = np.zeros(size + tail_samples, dtype=np.float32)
+    for stage_index, (start_s, end_s, stage_gain) in enumerate(contacts):
+        start_index = min(size, round(start_s * sample_rate))
+        end_index = min(size, round(end_s * sample_rate))
+        stage = grf[start_index:end_index]
+        peak = float(np.max(stage)) if stage.size else 0.0
+        if peak <= 1e-8:
+            continue
+        active = np.flatnonzero(stage >= peak * 0.24)
+        event_start = start_index + (int(active[0]) if active.size else 0)
+        effective_mass = footwear_contact.effective_mass_kg
+        stiffness = footwear_contact.normal_stiffness_n_m * (1.0 - 0.14 * stage_index)
+        contact = ImpactContact(
+            effective_mass_kg=effective_mass,
+            stiffness=stiffness,
+            restitution=footwear_contact.material.restitution,
+        )
+        velocity = 0.045 + 0.22 * math.sqrt(peak) * (
+            0.65 + 0.35 * footwear_contact.material.contact_hardness
+        )
+        trace = impact_force(
+            contact=contact,
+            velocity_m_s=velocity,
+            sample_rate=sample_rate,
+            max_contact_s=0.06,
+        )
+        event = render_physical_impact(
+            trace,
+            mode_sets[stage_index],
+            sample_rate=sample_rate,
+            rng=rng,
+            microscopic_gain=(
+                0.08
+                if surface == "wood"
+                else 0.25 + 0.62 * footwear_contact.material.contact_hardness
+            ),
+            output_gain=(
+                22.0
+                * floor.modal_gain
+                * SOLID_SURFACE_PROFILES[surface].transient_gain
+                * stage_gain
+                * (0.72 + 0.28 * footwear.heel_gain)
+            ),
+        )
+        mix_at(output, event, event_start)
+    return output, mode_sets[1]
+
+
+def _mechanical_friction_audio(
+    *,
+    grf: FloatAudio,
+    footwear: FootwearProfile,
+    footwear_contact: FootwearContactPreset,
+    surface: str,
+    modes: ModeSet,
+    rng: np.random.Generator,
+    sample_rate: int,
+) -> FloatAudio:
+    if grf.size == 0:
+        return np.zeros(0, dtype=np.float32)
+    floor_material = FLOOR_OBJECTS[surface].material
+    time = np.arange(grf.size, dtype=np.float32) / np.float32(sample_rate)
+    release_gate = np.clip((time - np.float32(0.055)) / np.float32(0.035), 0.0, 1.0)
+    slip_velocity = release_gate * (np.float32(0.035) + np.float32(0.18) * grf)
+    normal_load = grf * np.float32(620.0)
+    friction_scale = 0.48 + 0.52 * footwear.friction_gain
+    mu_static = (
+        math.sqrt(footwear_contact.material.friction_static * floor_material.friction_static)
+        * friction_scale
+    )
+    mu_dynamic = (
+        math.sqrt(footwear_contact.material.friction_dynamic * floor_material.friction_dynamic)
+        * friction_scale
+    )
+    preset = LuGrePreset(
+        static_coefficient=mu_static,
+        dynamic_coefficient=min(mu_static, mu_dynamic),
+        stribeck_velocity_m_s=max(
+            0.005,
+            math.sqrt(
+                footwear_contact.material.stribeck_velocity_m_s
+                * floor_material.stribeck_velocity_m_s
+            ),
+        ),
+        bristle_stiffness_n_m=max(4_000.0, footwear_contact.normal_stiffness_n_m * 0.045),
+        bristle_damping_n_s_m=0.12,
+        viscous_coefficient_n_s_m=math.sqrt(
+            footwear_contact.material.viscous_friction * floor_material.viscous_friction
+        )
+        * 0.08,
+    )
+    trace = lugre_friction(
+        np.asarray(slip_velocity, dtype=np.float32),
+        np.asarray(normal_load, dtype=np.float32),
+        preset,
+        sample_rate,
+    )
+    traveled = np.cumsum(np.abs(slip_velocity), dtype=np.float64) / sample_rate
+    roughness_rms = math.sqrt(
+        footwear_contact.material.roughness_rms_m**2 + floor_material.roughness_rms_m**2
+    )
+    correlation = math.sqrt(
+        footwear_contact.material.roughness_correlation_m * floor_material.roughness_correlation_m
+    )
+    roughness = make_roughness_profile(
+        roughness_rms_m=max(roughness_rms, 1e-9),
+        correlation_length_m=max(correlation, 1e-6),
+        seed=int(rng.integers(0, 2**32, dtype=np.uint32)),
+        length_m=max(0.12, float(traveled[-1]) + 0.05),
+    )
+    surface_velocity = roughness_velocity(
+        roughness, np.asarray(traveled, dtype=np.float32), sample_rate
+    )
+    power_envelope = np.sqrt(trace.power_w / np.float32(0.8))
+    release = np.sqrt(trace.release_energy_j * np.float32(sample_rate)) * np.float32(0.008)
+    excitation = np.asarray(
+        surface_velocity * power_envelope * np.float32(150.0) + release,
+        dtype=np.float32,
+    )
+    bank = ModalResonatorBank(modes, sample_rate)
+    resonant = bank.process(excitation) * np.float32(90.0)
+    direct = excitation * np.float32(
+        0.025 * footwear.friction_gain * SOLID_SURFACE_PROFILES[surface].friction_roughness
+    )
+    result = np.asarray(direct + resonant, dtype=np.float32)
+    if footwear.friction_brightness < 0.5:
+        result = one_pole_lowpass(result, sample_rate, 2_200.0)
+    else:
+        result = one_pole_highpass(result, sample_rate, 480.0)
+    return result
 
 
 def _solid_footstep(
@@ -103,22 +284,22 @@ def _solid_footstep(
     grf: FloatAudio,
     surface: str,
     footwear: FootwearProfile,
+    footwear_contact: FootwearContactPreset,
     rng: np.random.Generator,
     sample_rate: int,
 ) -> FloatAudio:
-    """Excite a solid floor with aperiodic contact, then add weak modes/friction."""
+    """Render GRF-timed compliant contacts, floor modes, and loaded slip friction."""
     profile = SOLID_SURFACE_PROFILES[surface]
     size = grf.size
     if size == 0:
         return np.zeros(0, dtype=np.float32)
-
-    contact = impact_excitation(
-        sample_rate=sample_rate,
-        duration=size,
-        force_envelope=grf,
-        hardness=footwear.heel_hardness,
-        brightness=0.58 * profile.contact_brightness + 0.42 * footwear.friction_brightness,
+    physical_contact, floor_modes = _floor_contact_audio(
+        grf=grf,
+        surface=surface,
+        footwear=footwear,
+        footwear_contact=footwear_contact,
         rng=rng,
+        sample_rate=sample_rate,
     )
     low_noise = bandpass_noise(rng, size, sample_rate, 42.0, 850.0)
     mid_noise = bandpass_noise(
@@ -137,7 +318,6 @@ def _solid_footstep(
     )
     low_layer = low_noise * grf * np.float32(0.13 * footwear.low_weight_gain)
     mid_layer = mid_noise * grf * np.float32(0.17 * footwear.sole_gain)
-
     time = np.arange(size, dtype=np.float32) / np.float32(sample_rate)
     heel_env = asymmetric_pulse(
         size,
@@ -152,43 +332,23 @@ def _solid_footstep(
     heel_layer = (
         heel_noise * heel_env * np.float32(0.15 * footwear.heel_gain * profile.transient_gain)
     )
-
-    contact_mix = np.asarray(contact * np.float32(0.34) + low_layer + mid_layer + heel_layer)
-    contact_mix = one_pole_lowpass(contact_mix, sample_rate, profile.high_cut_hz)
-    contact_mix = one_pole_highpass(contact_mix, sample_rate, profile.low_cut_hz)
-    modes = _stable_modes(surface, sample_rate)
-    modal = modal_bank(
-        contact_mix,
-        sample_rate,
-        rng,
-        modes,
-        frequency_jitter=0.009,
-        decay_jitter=0.10,
+    contact_noise = np.asarray(
+        physical_contact[:size] * np.float32(0.08) + low_layer + mid_layer + heel_layer,
+        dtype=np.float32,
     )
-    modal *= np.float32(rng.uniform(0.86, 1.14))
-
-    # Friction follows loaded movement and is deliberately quieter than contact.
-    loaded_motion = np.maximum(grf, 0.0)
-    release_gate = np.clip((time - np.float32(0.085)) / np.float32(0.035), 0.0, 1.0)
-    friction_envelope = loaded_motion * (0.34 + 0.66 * release_gate)
-    friction_noise = bandpass_noise(
-        rng,
-        size,
-        sample_rate,
-        180.0,
-        min(4_800.0, sample_rate * 0.45),
+    contact_noise = one_pole_lowpass(contact_noise, sample_rate, profile.high_cut_hz)
+    contact_noise = one_pole_highpass(contact_noise, sample_rate, profile.low_cut_hz)
+    output = physical_contact.copy()
+    output[:size] += contact_noise
+    friction = _mechanical_friction_audio(
+        grf=grf,
+        footwear=footwear,
+        footwear_contact=footwear_contact,
+        surface=surface,
+        modes=floor_modes,
+        rng=rng,
+        sample_rate=sample_rate,
     )
-    if footwear.friction_brightness < 0.5:
-        friction_noise = one_pole_lowpass(friction_noise, sample_rate, 2_200.0)
-    else:
-        friction_noise = one_pole_highpass(friction_noise, sample_rate, 480.0)
-    friction = (
-        friction_noise
-        * friction_envelope
-        * np.float32(0.055 * footwear.friction_gain * profile.friction_roughness)
-    )
-
-    # Very small, independently varied toe scuff adds a release cue without a pitched tone.
     toe_start = int(rng.uniform(0.105, min(0.17, max(0.106, time[-1] - 0.015))) * sample_rate)
     toe_size = max(1, size - toe_start)
     scuff_noise = bandpass_noise(
@@ -205,8 +365,12 @@ def _solid_footstep(
     friction[toe_start:] += (
         scuff_noise * scuff_env * np.float32(0.035 * footwear.toe_gain * profile.friction_roughness)
     )
-
-    return np.asarray(contact_mix + modal + friction, dtype=np.float32)
+    output[:size] += friction
+    if surface == "wood":
+        output = one_pole_lowpass(output, sample_rate, 900.0)
+    elif surface == "carpet":
+        output = one_pole_lowpass(output, sample_rate, 2_500.0)
+    return np.asarray(output, dtype=np.float32)
 
 
 def solid_footstep(
@@ -229,6 +393,7 @@ def solid_footstep(
         grf=grf,
         surface=surface,
         footwear=profile,
+        footwear_contact=FOOTWEAR_CONTACTS[footwear],
         rng=rng,
         sample_rate=sample_rate,
     )
@@ -244,6 +409,8 @@ class ParticleEvent:
     center_hz: float
     resonant: bool
 
+    work_budget_j: float
+
 
 def _sample_particle_events(
     *,
@@ -251,24 +418,41 @@ def _sample_particle_events(
     surface: AggregateSurfaceProfile,
     rng: np.random.Generator,
     sample_rate: int,
+    footwear_contact: FootwearContactPreset | None = None,
+    friction_gain: float = 0.5,
 ) -> list[ParticleEvent]:
-    """Sample a blockwise Poisson process whose rate follows contact load."""
+    """Sample load-driven collisions and cap their energy by available slip work."""
     block_size = max(1, round(0.002 * sample_rate))
     low_hz, high_hz = surface.particle_band_hz
     events: list[ParticleEvent] = []
+    material_mu = footwear_contact.material.friction_dynamic if footwear_contact else 0.78
+    footwear_scale = 0.48 + 0.52 * friction_gain
     for block_start in range(0, grf.size, block_size):
         block_end = min(grf.size, block_start + block_size)
         block = grf[block_start:block_end]
         mean_load = max(0.0, float(np.mean(block, dtype=np.float64)))
         rate = surface.event_density * mean_load**surface.density_force_exponent
         count = int(rng.poisson(rate * (block_end - block_start) / sample_rate))
+        block_duration = (block_end - block_start) / sample_rate
+        slip_work_j = (
+            mean_load * 620.0 * material_mu * footwear_scale * 0.25 * block_duration * 0.42
+        )
+        if count == 0 or slip_work_j < surface.minimum_energy:
+            continue
+        max_events = max(1, int(slip_work_j / surface.minimum_energy))
+        count = min(count, max_events)
+        remaining_work_j = slip_work_j
         for _ in range(count):
             duration = max(2, round(float(rng.uniform(*surface.particle_duration_s)) * sample_rate))
             u = float(rng.random())
-            energy = (
+            proposed_energy = (
                 surface.minimum_energy
                 + (surface.maximum_energy - surface.minimum_energy) * u**surface.energy_power
             )
+            energy = min(proposed_energy, remaining_work_j)
+            if energy < surface.minimum_energy:
+                break
+            remaining_work_j -= energy
             center = math.exp(float(rng.uniform(math.log(low_hz), math.log(high_hz))))
             events.append(
                 ParticleEvent(
@@ -277,6 +461,7 @@ def _sample_particle_events(
                     energy=energy,
                     center_hz=center,
                     resonant=bool(rng.random() < surface.resonance_probability),
+                    work_budget_j=slip_work_j,
                 )
             )
     return events
@@ -287,29 +472,34 @@ def _aggregate_footstep(
     grf: FloatAudio,
     surface: AggregateSurfaceProfile,
     footwear: FootwearProfile,
+    footwear_contact: FootwearContactPreset,
     rng: np.random.Generator,
     sample_rate: int,
 ) -> FloatAudio:
-    """Render a granular surface as load-driven stochastic micro-impacts."""
-    particle_tail = max(1, round(surface.particle_duration_s[1] * sample_rate))
-    output = np.zeros(grf.size + particle_tail, dtype=np.float32)
+    """Render load-bounded granular contacts over a physical hard-floor response."""
     if grf.size == 0:
-        return output
-    force_peak = float(np.max(grf))
-    body = impact_excitation(
-        sample_rate=sample_rate,
-        duration=grf.size,
-        force_envelope=grf,
-        hardness=0.28 + 0.42 * footwear.heel_hardness,
-        brightness=0.58,
+        return np.zeros(0, dtype=np.float32)
+    particle_tail = max(1, round(surface.particle_duration_s[1] * sample_rate))
+    body, floor_modes = _floor_contact_audio(
+        grf=grf,
+        surface="stone",
+        footwear=footwear,
+        footwear_contact=footwear_contact,
         rng=rng,
+        sample_rate=sample_rate,
     )
+    output = np.zeros(max(body.size, grf.size + particle_tail), dtype=np.float32)
+    output[: body.size] += body
     body_noise = bandpass_noise(rng, grf.size, sample_rate, 45.0, 1_400.0)
-    body += body_noise * grf * np.float32(0.13 * footwear.low_weight_gain)
-    output[: grf.size] += body * np.float32(0.30)
-
-    events = _sample_particle_events(grf=grf, surface=surface, rng=rng, sample_rate=sample_rate)
-    energy_scale = 0.62 + 0.60 * float(np.clip(force_peak, 0.0, 1.4))
+    output[: grf.size] += body_noise * grf * np.float32(0.13 * footwear.low_weight_gain)
+    events = _sample_particle_events(
+        grf=grf,
+        surface=surface,
+        rng=rng,
+        sample_rate=sample_rate,
+        footwear_contact=footwear_contact,
+        friction_gain=footwear.friction_gain,
+    )
     for event in events:
         size = event.duration_samples
         noise_low = max(80.0, event.center_hz / 1.65)
@@ -322,7 +512,7 @@ def _aggregate_footstep(
         peak = float(np.max(envelope)) if envelope.size else 0.0
         if peak > 0.0:
             envelope /= np.float32(peak)
-        amplitude = math.sqrt(event.energy) * energy_scale * surface.texture_gain
+        amplitude = math.sqrt(event.energy) * surface.texture_gain
         particle = noise * envelope * np.float32(amplitude)
         if event.resonant:
             phase = float(rng.uniform(-math.pi, math.pi))
@@ -331,15 +521,16 @@ def _aggregate_footstep(
             ) * np.exp(-t / np.float32(max(0.001, decay * 0.7)))
             particle += ring * envelope * np.float32(amplitude * 0.075)
         mix_at(output, np.asarray(particle, dtype=np.float32), event.start_sample)
-    slip_noise = bandpass_noise(
-        rng,
-        grf.size,
-        sample_rate,
-        260.0,
-        min(4_200.0, sample_rate * 0.45),
+    friction = _mechanical_friction_audio(
+        grf=grf,
+        footwear=footwear,
+        footwear_contact=footwear_contact,
+        surface="stone",
+        modes=floor_modes,
+        rng=rng,
+        sample_rate=sample_rate,
     )
-    movement = np.linspace(0.38, 1.0, grf.size, dtype=np.float32)
-    output[: grf.size] += slip_noise * grf * movement * np.float32(0.022 * footwear.friction_gain)
+    output[: grf.size] += friction
     return output
 
 
@@ -363,6 +554,7 @@ def aggregate_footstep(
         grf=grf,
         surface=AGGREGATE_SURFACE_PROFILES[surface],
         footwear=profile,
+        footwear_contact=FOOTWEAR_CONTACTS[footwear],
         rng=rng,
         sample_rate=sample_rate,
     )

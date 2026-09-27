@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -211,4 +212,193 @@ def friction(
             decay_jitter=0.06,
         )
         result = result + resonated * np.float32(0.38)
+    return np.asarray(result, dtype=np.float32)
+
+
+@dataclass(frozen=True, slots=True)
+class LuGrePreset:
+    """Macro friction coefficients in SI units for one loaded interface."""
+
+    static_coefficient: float
+    dynamic_coefficient: float
+    stribeck_velocity_m_s: float
+    bristle_stiffness_n_m: float
+    bristle_damping_n_s_m: float = 0.0
+    viscous_coefficient_n_s_m: float = 0.0
+
+    def __post_init__(self) -> None:
+        if not 0.0 <= self.dynamic_coefficient <= self.static_coefficient:
+            raise ValueError("friction coefficients must satisfy 0 <= dynamic <= static")
+        for name in ("stribeck_velocity_m_s", "bristle_stiffness_n_m"):
+            value = getattr(self, name)
+            if not math.isfinite(value) or value <= 0.0:
+                raise ValueError(f"{name} must be finite and positive")
+        for name in (
+            "static_coefficient",
+            "dynamic_coefficient",
+            "bristle_damping_n_s_m",
+            "viscous_coefficient_n_s_m",
+        ):
+            value = getattr(self, name)
+            if not math.isfinite(value) or value < 0.0:
+                raise ValueError(f"{name} must be finite and non-negative")
+
+
+@dataclass(frozen=True, slots=True)
+class FrictionTrace:
+    force_n: FloatAudio
+    bristle_state_m: FloatAudio
+    power_w: FloatAudio
+    release_energy_j: FloatAudio
+
+
+def lugre_friction(
+    relative_velocity_m_s: FloatAudio,
+    normal_load_n: float | FloatAudio,
+    preset: LuGrePreset,
+    sample_rate: int,
+    *,
+    initial_state_m: float = 0.0,
+) -> FrictionTrace:
+    """Integrate a stable LuGre bristle state and return opposing friction force."""
+    if sample_rate <= 0:
+        raise ValueError("sample_rate must be positive")
+    velocity = np.asarray(relative_velocity_m_s, dtype=np.float64)
+    if velocity.ndim != 1 or not np.all(np.isfinite(velocity)):
+        raise ValueError("relative_velocity_m_s must be a finite one-dimensional signal")
+    if isinstance(normal_load_n, np.ndarray):
+        load = np.asarray(normal_load_n, dtype=np.float64)
+    else:
+        load = np.full(velocity.size, float(normal_load_n), dtype=np.float64)
+    if load.shape != velocity.shape or not np.all(np.isfinite(load)) or np.any(load < 0.0):
+        raise ValueError("normal_load_n must be finite, non-negative, and match velocity")
+    if not math.isfinite(initial_state_m):
+        raise ValueError("initial_state_m must be finite")
+    forces = np.zeros(velocity.size, dtype=np.float64)
+    states = np.zeros(velocity.size, dtype=np.float64)
+    powers = np.zeros(velocity.size, dtype=np.float64)
+    releases = np.zeros(velocity.size, dtype=np.float64)
+    state = float(initial_state_m)
+    dt = 1.0 / sample_rate
+    state_limit_scale = preset.static_coefficient / preset.bristle_stiffness_n_m
+    for index, speed in enumerate(velocity):
+        previous = state
+        abs_speed = abs(float(speed))
+        mu = preset.dynamic_coefficient + (
+            preset.static_coefficient - preset.dynamic_coefficient
+        ) * math.exp(-((abs_speed / preset.stribeck_velocity_m_s) ** 2))
+        limiting_force = mu * float(load[index])
+        g_distance = max(limiting_force / preset.bristle_stiffness_n_m, 1e-12)
+        rate = abs_speed / g_distance
+        if rate <= 1e-12:
+            state = previous
+        else:
+            decay = math.exp(-rate * dt)
+            state = previous * decay + float(speed) * (-math.expm1(-rate * dt)) / rate
+        state = min(
+            max(state, -state_limit_scale * float(load[index])),
+            state_limit_scale * float(load[index]),
+        )
+        state_rate = (state - previous) / dt
+        raw = (
+            preset.bristle_stiffness_n_m * state
+            + preset.bristle_damping_n_s_m * state_rate
+            + preset.viscous_coefficient_n_s_m * float(speed)
+        )
+        if abs_speed <= 1e-12:
+            force = -preset.bristle_stiffness_n_m * state
+        else:
+            opposing_magnitude = max(0.0, math.copysign(1.0, float(speed)) * raw)
+            force = -math.copysign(opposing_magnitude, float(speed))
+        forces[index] = force
+        states[index] = state
+        powers[index] = max(0.0, -force * float(speed))
+        releases[index] = max(
+            0.0,
+            0.5 * preset.bristle_stiffness_n_m * (previous * previous - state * state),
+        )
+    return FrictionTrace(
+        force_n=np.asarray(forces, dtype=np.float32),
+        bristle_state_m=np.asarray(states, dtype=np.float32),
+        power_w=np.asarray(powers, dtype=np.float32),
+        release_energy_j=np.asarray(releases, dtype=np.float32),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class RoughnessProfile:
+    spatial_sample_rate_per_m: int
+    heights_m: FloatAudio
+    correlation_length_m: float
+
+    def __post_init__(self) -> None:
+        if (
+            self.spatial_sample_rate_per_m <= 0
+            or self.heights_m.ndim != 1
+            or self.heights_m.size < 2
+        ):
+            raise ValueError("roughness profile needs a positive rate and at least two samples")
+        if not np.all(np.isfinite(self.heights_m)):
+            raise ValueError("roughness heights must be finite")
+        if not math.isfinite(self.correlation_length_m) or self.correlation_length_m <= 0.0:
+            raise ValueError("correlation_length_m must be finite and positive")
+
+
+def make_roughness_profile(
+    *,
+    roughness_rms_m: float,
+    correlation_length_m: float,
+    seed: int,
+    length_m: float = 0.15,
+    spatial_sample_rate_per_m: int | None = None,
+    spectral_slope: float = 2.0,
+) -> RoughnessProfile:
+    """Generate a compact deterministic band-limited spatial surface track."""
+    for value, name in (
+        (roughness_rms_m, "roughness_rms_m"),
+        (correlation_length_m, "correlation_length_m"),
+        (length_m, "length_m"),
+        (spectral_slope, "spectral_slope"),
+    ):
+        if not math.isfinite(value) or value <= 0.0:
+            raise ValueError(f"{name} must be finite and positive")
+    rate = spatial_sample_rate_per_m or max(1_000, math.ceil(8.0 / correlation_length_m))
+    if rate <= 0 or seed < 0:
+        raise ValueError("spatial sample rate must be positive and seed non-negative")
+    size = max(2, math.ceil(length_m * rate))
+    rng = np.random.default_rng(seed)
+    white = rng.normal(size=size)
+    spectrum = np.fft.rfft(white)
+    spatial_frequency = np.fft.rfftfreq(size, d=1.0 / rate)
+    shaping = (1.0 + (spatial_frequency * correlation_length_m) ** 2) ** (-spectral_slope / 4.0)
+    shaping[0] = 0.0
+    heights = np.fft.irfft(spectrum * shaping, n=size)
+    standard_deviation = float(np.std(heights))
+    if standard_deviation > 0.0:
+        heights *= roughness_rms_m / standard_deviation
+    return RoughnessProfile(
+        spatial_sample_rate_per_m=rate,
+        heights_m=np.asarray(heights, dtype=np.float32),
+        correlation_length_m=correlation_length_m,
+    )
+
+
+def roughness_velocity(
+    profile: RoughnessProfile,
+    position_m: FloatAudio,
+    sample_rate: int,
+) -> FloatAudio:
+    """Sample a fixed spatial profile along a trajectory and return dr/dt."""
+    if sample_rate <= 0:
+        raise ValueError("sample_rate must be positive")
+    positions = np.asarray(position_m, dtype=np.float64)
+    if positions.ndim != 1 or not np.all(np.isfinite(positions)):
+        raise ValueError("position_m must be a finite one-dimensional signal")
+    coordinates = (
+        np.arange(profile.heights_m.size, dtype=np.float64) / profile.spatial_sample_rate_per_m
+    )
+    heights = np.interp(positions, coordinates, profile.heights_m.astype(np.float64))
+    if heights.size < 2:
+        return np.zeros(heights.size, dtype=np.float32)
+    result = np.gradient(heights) * sample_rate
     return np.asarray(result, dtype=np.float32)

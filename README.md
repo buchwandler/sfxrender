@@ -61,11 +61,24 @@ HTTP audio sources unchanged.
 - `door.open`
 - `door.close`
 
-Built-in footsteps and knocks use deterministic, NumPy-only procedural synthesis rather than bundled recordings. Footsteps build a seeded multi-stage ground-reaction-force envelope; footwear-shaped broadband contact excites either stable wood/stone/carpet modes or GRF-driven stochastic gravel impacts. Low-level seeded friction and release texture preserve event variation without a pitched body oscillator. Knocks use the same broadband impact and damped modal-response primitives. Walking retains subtle seeded timing and side variation, so repeated renders with the same URI match exactly.
+Built-in footsteps and knocks use deterministic, NumPy-only procedural synthesis rather than bundled recordings. Footsteps retain the staged ground-reaction-force and heel/sole/toe timing: compliant contact excites effective floor modes, footwear/floor presets shape contact and radiation, and bounded friction/roughness and gravel events draw energy from load and slip. Knocks use a compliant force pulse, geometry-aware modal objects, and strike-position coupling rather than random body-frequency jitter. Fixed URIs render finite mono float audio deterministically, including seeded step-to-step variation.
 
-Door effects use seeded physically informed models. A generated door has stable panel/frame resonances, hinge-friction regions, and hardware character; opening and closing actions excite that same model differently. The same material and seed intentionally represent the same door for both actions.
+Door effects use a shared effective assembly with stable panel/frame resonances, inertia-loaded hinge friction, spatial roughness, and physical latch/stop contacts. Open and close actions excite the same generated door differently; matching material and seed intentionally identify the same object. Semantic controls such as `speed`, `creak`, and `force` alter its motion/contact behavior without changing the public URI/API.
 
 Built-in renderers ignore unknown query parameters so callers can preserve forward-compatible URI fields; misspelled parameters are therefore not rejected.
+
+## Effective models and reference calibration
+
+These are physically informed **effective models**, not full material identification or a claim of exact boundary conditions. Modal frequencies, gains, contact parameters, and damping are practical acoustic approximations; the generated audio does not model the recording room or microphone. Use several similarly recorded hits, and treat presets as empirical tuning data. No mesh/FEM solver or SciPy dependency is used by rendering or the calibration tools.
+
+The developer-only NumPy tools accept uncompressed integer PCM WAVs. Fit a modal preset from one or more takes, then compare rendered output against reference takes:
+
+```bash
+python tools/fit_modal_reference.py --name oak --output example-artifacts/oak-modes.json reference-a.wav reference-b.wav
+python tools/compare_reference.py --reference reference-a.wav reference-b.wav --candidate render-a.wav render-b.wav --output example-artifacts/oak-comparison.json
+```
+
+The fitter detects an RMS onset, analyzes the configurable decay window (default 100–500 ms), estimates interpolated spectral peaks and narrowband log-amplitude decay constants, and clusters repeatable modes. Its JSON includes modal gain estimates, support, and frequency/decay spread. The comparison report does not align waveforms: it summarizes feature medians/spread, band energy, centroid trajectory, event density, matched modal shifts, and inter-hit spectral correlation. These measurements are sensitive to background noise, room response, microphone placement, and short/noisy decays; they are calibration aids, not ground truth. See `python tools/fit_modal_reference.py --help` and `python tools/compare_reference.py --help` for options.
 
 ## Audition the catalog
 
@@ -84,7 +97,7 @@ Run the focused Foley comparison gallery with:
 python examples/foley_quality_gallery.py
 ```
 
-It writes six ordered footstep WAVs (`01-footsteps-wood-boots.wav` through `06-footsteps-gravel-boots.wav`), four knocks, a footstep-only `foley-footsteps-showcase.wav`, and a combined `foley-quality-showcase.wav` under `example-artifacts/`; both strips leave 550 ms between cases. Third-party recordings used for local listening or measurement belong under the gitignored `reference-audio/` directory. They are not fetched, bundled, packaged, or committed.
+It writes eight ordered footstep WAVs, including same-seed footwear and light/heavy-load A/B cases, six knocks including same-seed wood/oak and soft-fingertip/hard-metal-impactor contrasts, a footstep-only `foley-footsteps-showcase.wav`, and a combined `foley-quality-showcase.wav` under `example-artifacts/`; both strips leave 550 ms between cases. Third-party recordings for local listening or measurement belong under the gitignored `reference-audio/` directory. They are not fetched, bundled, packaged, or committed.
 
 Render the door-specific fixed-seed gallery with:
 
@@ -92,7 +105,7 @@ Render the door-specific fixed-seed gallery with:
 python examples/door_quality_gallery.py
 ```
 
-It writes eight ordered open/close WAVs and `door-quality-showcase.wav` under `example-artifacts/`; the wood door #501 cases pair opening and closing from the same generated identity.
+It writes ten ordered open/close WAVs and `door-quality-showcase.wav` under `example-artifacts/`. Wood cases share seed 501 for controlled speed, creak, and closing-force contrasts; opening and closing from that seed reuse the same generated door.
 
 Run the deterministic spectral/temporal analysis report with:
 
@@ -119,6 +132,7 @@ It writes `door-analysis.txt` beneath `example-artifacts/` (or a caller-supplied
 - [`examples/analyze_foley.py`](examples/analyze_foley.py) — reproducible spectral and contact-stage metrics for the fixed footstep cases.
 - [`examples/door_quality_gallery.py`](examples/door_quality_gallery.py) — fixed-seed opening/closing gallery, including a same-seed paired door.
 - [`examples/analyze_doors.py`](examples/analyze_doors.py) — NumPy-only waveform and generated door-model metrics.
+- [`tools/fit_modal_reference.py`](tools/fit_modal_reference.py) and [`tools/compare_reference.py`](tools/compare_reference.py) — NumPy-only developer calibration tools; see [Effective models and reference calibration](#effective-models-and-reference-calibration).
 
 Run the other examples after installation:
 
