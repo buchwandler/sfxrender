@@ -45,6 +45,30 @@ CATALOG_ITEMS = (
         "09-door-close-wood-normal.wav",
         "sfx:door.close?material=wood&speed=normal&force=0.7&creak=0.2&seed=31",
     ),
+    (
+        "10-printer-print-1.wav",
+        "sfx:printer.print?pages=1&speed=normal&seed=101",
+    ),
+    (
+        "11-printer-tray-open.wav",
+        "sfx:printer.tray_open?speed=normal&paper_load=full&seed=102",
+    ),
+    (
+        "12-printer-power-off.wav",
+        "sfx:printer.power_switch?state=off&seed=103",
+    ),
+    (
+        "13-printer-restart.wav",
+        "sfx:printer.restart?speed=normal&seed=104",
+    ),
+    (
+        "14-pen-write.wav",
+        "sfx:pen.write?duration=1.6&speed=normal&pressure=0.55&seed=105",
+    ),
+    (
+        "15-printer-wake.wav",
+        "sfx:printer.wake?depth=light&seed=106",
+    ),
 )
 
 

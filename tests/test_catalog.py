@@ -7,6 +7,12 @@ def test_catalog_contains_builtin_effects() -> None:
     assert "footsteps.walk" in values
     assert "door.open" in values
     assert "door.close" in values
+    assert "printer.print" in values
+    assert "printer.tray_open" in values
+    assert "printer.power_switch" in values
+    assert "printer.restart" in values
+    assert "pen.write" in values
+    assert "printer.wake" in values
     assert "parameters" in values["impact.knock"]
 
 

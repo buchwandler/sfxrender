@@ -9,11 +9,19 @@ import numpy as np
 from ._doors import generate_door_model, render_close, render_open
 from ._footsteps import aggregate_footstep, solid_footstep
 from ._params import choice, integer, number
+from ._pen import render_pen_write
 from ._physics.contact import ImpactContact, impact_force
 from ._physics.geometry import rectangular_plate_modes
 from ._physics.physical_impacts import render_physical_impact
 from ._physics.presets import KNOCK_IMPACTORS, KNOCK_OBJECTS, OBJECT_PRESETS
 from ._physics.rng import RandomStream, event_rng
+from ._printer import (
+    render_printer_power_switch,
+    render_printer_print,
+    render_printer_restart,
+    render_printer_tray_open,
+    render_printer_wake,
+)
 from .types import FloatAudio, RenderContext, RenderedSound, SfxSpec
 
 
@@ -317,3 +325,65 @@ def door_close(spec: SfxSpec, context: RenderContext) -> RenderedSound:
         sample_rate=context.sample_rate,
     )
     return RenderedSound(samples, context.sample_rate, spec)
+
+
+def printer_print(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    params = spec.parameters
+    pages = integer(params, "pages", 1, minimum=1, maximum=12)
+    speed = choice(params, "speed", "normal", {"slow", "normal", "fast"})
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_printer_print(
+        sample_rate=context.sample_rate, pages=pages, speed=speed, seed=seed
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def printer_tray_open(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    params = spec.parameters
+    speed = choice(params, "speed", "normal", {"slow", "normal", "fast"})
+    paper_load = choice(params, "paper_load", "full", {"empty", "partial", "full"})
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_printer_tray_open(
+        sample_rate=context.sample_rate, speed=speed, paper_load=paper_load, seed=seed
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def printer_power_switch(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    params = spec.parameters
+    state = choice(params, "state", "off", {"off", "on"})
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_printer_power_switch(sample_rate=context.sample_rate, state=state, seed=seed)
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def printer_restart(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    params = spec.parameters
+    speed = choice(params, "speed", "normal", {"slow", "normal", "fast"})
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_printer_restart(sample_rate=context.sample_rate, speed=speed, seed=seed)
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def pen_write(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    params = spec.parameters
+    duration = number(params, "duration", 1.6, minimum=0.25, maximum=8.0)
+    speed = choice(params, "speed", "normal", {"slow", "normal", "fast"})
+    pressure = number(params, "pressure", 0.55, minimum=0.1, maximum=1.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_pen_write(
+        sample_rate=context.sample_rate,
+        duration=duration,
+        speed=speed,
+        pressure=pressure,
+        seed=seed,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def printer_wake(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    params = spec.parameters
+    depth = choice(params, "depth", "light", {"light", "deep"})
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_printer_wake(sample_rate=context.sample_rate, depth=depth, seed=seed)
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)

@@ -74,12 +74,32 @@ SFXRender does **not** parse SSMD. The consuming application parses its document
 - `phone.ring`
 - `door.open`
 - `door.close`
+- `printer.print`
+- `printer.tray_open`
+- `printer.power_switch`
+- `printer.restart`
+- `pen.write`
+- `printer.wake`
 
 Built-in footsteps and knocks use deterministic, NumPy-only procedural synthesis rather than bundled recordings. Footsteps retain the staged ground-reaction-force and heel/sole/toe timing: compliant contact excites effective floor modes, footwear/floor presets shape contact and radiation, and bounded friction/roughness and gravel events draw energy from load and slip. Knocks use a compliant force pulse, geometry-aware modal objects, and strike-position coupling rather than random body-frequency jitter. Fixed URIs render finite mono float audio deterministically, including seeded step-to-step variation.
 
 Door effects use a shared effective assembly with stable panel/frame resonances, inertia-loaded hinge friction, spatial roughness, and physical latch/stop contacts. Open and close actions excite the same generated door differently; matching material and seed intentionally identify the same object. Semantic controls such as `speed`, `creak`, and `force` alter its motion/contact behavior without changing the public URI/API.
 
 Built-in renderers validate parameter names and values against SFXRender's effect catalog; unknown names and invalid values raise public typed errors instead of being silently ignored.
+
+## Printer-story audio spans
+
+SFXRender provides deterministic printer and pen events through semantic URIs; the consuming application resolves `src` rather than having SSMD synthesize audio. For example, the printer story can include:
+
+```ssmd
+[printer prints three sheets]{src="sfx:printer.print?pages=3&speed=normal&seed=301"}
+
+[paper tray opens]{src="sfx:printer.tray_open?paper_load=full&seed=302"}
+
+[pen writes on paper]{src="sfx:pen.write?duration=1.8&pressure=0.55&seed=305"}
+```
+
+When audio is supported, the bracket text is descriptive audio metadata, not spoken narration. These spans are foreground audio events; overlap/mixing with narration is the consuming application's responsibility.
 
 ## Effective models and reference calibration
 

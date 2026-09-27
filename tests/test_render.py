@@ -1,4 +1,4 @@
-from importlib.metadata import PackageNotFoundError, version
+from importlib.metadata import distributions
 from pathlib import Path
 
 import numpy as np
@@ -39,6 +39,12 @@ def test_builtin_effects_render() -> None:
         "sfx:phone.ring?style=classic&count=2&seed=3",
         "sfx:door.open?material=wood&speed=slow&seed=4",
         "sfx:door.close?material=wood&speed=normal&force=0.7&seed=5",
+        "sfx:printer.print?pages=2&speed=normal&seed=6",
+        "sfx:printer.tray_open?paper_load=full&seed=7",
+        "sfx:printer.power_switch?state=off&seed=8",
+        "sfx:printer.restart?speed=normal&seed=9",
+        "sfx:pen.write?duration=1.2&pressure=0.55&seed=10",
+        "sfx:printer.wake?depth=light&seed=11",
     ]
     for uri in uris:
         sound = renderer.render_uri(uri)
@@ -67,12 +73,15 @@ def test_pcm_contract_and_result_metadata() -> None:
 
 
 def test_package_version_matches_distribution_metadata() -> None:
-    try:
-        installed_version = version("sfxrender")
-    except PackageNotFoundError:
+    installed_versions = {
+        distribution.version
+        for distribution in distributions()
+        if distribution.metadata.get("Name", "").lower() == "sfxrender"
+    }
+    if not installed_versions:
         assert __version__ == "0+unknown"
     else:
-        assert __version__ == installed_version
+        assert __version__ in installed_versions
 
 
 def test_write_wav(tmp_path: Path) -> None:
@@ -150,6 +159,14 @@ def test_unknown_effect_is_a_typed_error() -> None:
         ("sfx:impact.knock?force=4.0", "expected a value in 0.05..1.0"),
         ("sfx:impact.knock?seed=not-a-number", "non-negative integer"),
         ("sfx:impact.knock?seed=-1", "non-negative integer"),
+        ("sfx:printer.print?pages=0", "expected a value in 1..12"),
+        ("sfx:printer.print?speed=turbo", "expected one of slow, normal, fast"),
+        ("sfx:printer.tray_open?paper_load=lots", "expected one of empty, partial, full"),
+        ("sfx:printer.power_switch?state=maybe", "expected one of off, on"),
+        ("sfx:printer.restart?speed=instant", "expected one of slow, normal, fast"),
+        ("sfx:pen.write?duration=0", "expected a value in 0.25..8.0"),
+        ("sfx:pen.write?pressure=2", "expected a value in 0.1..1.0"),
+        ("sfx:printer.wake?depth=coma", "expected one of light, deep"),
     ],
 )
 def test_invalid_effect_parameters_are_typed(uri: str, message: str) -> None:

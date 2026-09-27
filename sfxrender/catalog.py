@@ -73,6 +73,95 @@ _BUILTIN_CATALOG: dict[str, dict[str, Any]] = {
             "seed": {"type": "integer", "required": False},
         },
     },
+    "printer.print": {
+        "description": "Feed and print one or more sheets through an office printer.",
+        "parameters": {
+            "pages": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 12,
+                "default": 1,
+            },
+            "speed": {
+                "type": "enum",
+                "values": ["slow", "normal", "fast"],
+                "default": "normal",
+            },
+            "seed": {"type": "integer", "required": False},
+        },
+    },
+    "printer.tray_open": {
+        "description": "Unlatch and slide open a printer paper tray.",
+        "parameters": {
+            "speed": {
+                "type": "enum",
+                "values": ["slow", "normal", "fast"],
+                "default": "normal",
+            },
+            "paper_load": {
+                "type": "enum",
+                "values": ["empty", "partial", "full"],
+                "default": "full",
+            },
+            "seed": {"type": "integer", "required": False},
+        },
+    },
+    "printer.power_switch": {
+        "description": "Operate a printer power control and its local relay/mechanical response.",
+        "parameters": {
+            "state": {
+                "type": "enum",
+                "values": ["off", "on"],
+                "default": "off",
+            },
+            "seed": {"type": "integer", "required": False},
+        },
+    },
+    "printer.restart": {
+        "description": "Printer boot and mechanical calibration sequence after power-on.",
+        "parameters": {
+            "speed": {
+                "type": "enum",
+                "values": ["slow", "normal", "fast"],
+                "default": "normal",
+            },
+            "seed": {"type": "integer", "required": False},
+        },
+    },
+    "pen.write": {
+        "description": "A pen writing and scratching across paper.",
+        "parameters": {
+            "duration": {
+                "type": "seconds",
+                "minimum": 0.25,
+                "maximum": 8.0,
+                "default": 1.6,
+            },
+            "speed": {
+                "type": "enum",
+                "values": ["slow", "normal", "fast"],
+                "default": "normal",
+            },
+            "pressure": {
+                "type": "number",
+                "minimum": 0.1,
+                "maximum": 1.0,
+                "default": 0.55,
+            },
+            "seed": {"type": "integer", "required": False},
+        },
+    },
+    "printer.wake": {
+        "description": "Wake a sleeping printer with a short relay, motor, and fan response.",
+        "parameters": {
+            "depth": {
+                "type": "enum",
+                "values": ["light", "deep"],
+                "default": "light",
+            },
+            "seed": {"type": "integer", "required": False},
+        },
+    },
 }
 
 

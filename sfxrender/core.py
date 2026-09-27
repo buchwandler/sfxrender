@@ -11,7 +11,19 @@ import numpy as np
 
 from .catalog import catalog
 from .errors import InvalidEffectParameterError, SFXRenderError, UnknownEffectError
-from .procedural import door_close, door_open, footsteps, knock, phone_ring
+from .procedural import (
+    door_close,
+    door_open,
+    footsteps,
+    knock,
+    pen_write,
+    phone_ring,
+    printer_power_switch,
+    printer_print,
+    printer_restart,
+    printer_tray_open,
+    printer_wake,
+)
 from .types import RenderContext, RenderedSound, SfxSpec
 from .uri import parse_sfx_uri
 
@@ -120,6 +132,12 @@ class SFXRenderer:
             "phone.ring": phone_ring,
             "door.open": door_open,
             "door.close": door_close,
+            "printer.print": printer_print,
+            "printer.tray_open": printer_tray_open,
+            "printer.power_switch": printer_power_switch,
+            "printer.restart": printer_restart,
+            "pen.write": pen_write,
+            "printer.wake": printer_wake,
         }
 
     @property

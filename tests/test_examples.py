@@ -25,6 +25,12 @@ def test_examples_write_reproducible_wavs_only_to_requested_directory(tmp_path: 
             "07-door-wood-slow.wav",
             "08-door-metal-fast.wav",
             "09-door-close-wood-normal.wav",
+            "10-printer-print-1.wav",
+            "11-printer-tray-open.wav",
+            "12-printer-power-off.wav",
+            "13-printer-restart.wav",
+            "14-pen-write.wav",
+            "15-printer-wake.wav",
         ],
         "audiobook_scene.py": ["audiobook-scene-arrival.wav"],
         "parameter_gallery.py": [
@@ -61,6 +67,21 @@ def test_examples_write_reproducible_wavs_only_to_requested_directory(tmp_path: 
             "09-door-close-wood-fast-hard.wav",
             "10-door-close-metal-normal.wav",
             "door-quality-showcase.wav",
+        ],
+        "printer_quality_gallery.py": [
+            "01-printer-print-one-normal.wav",
+            "02-printer-print-three-normal.wav",
+            "03-printer-print-one-fast.wav",
+            "04-printer-tray-open-full.wav",
+            "05-printer-tray-open-empty.wav",
+            "06-printer-power-off.wav",
+            "07-printer-power-on.wav",
+            "08-printer-restart-normal.wav",
+            "09-printer-wake-light.wav",
+            "10-pen-write-normal.wav",
+            "11-pen-write-fast-light.wav",
+            "12-pen-write-slow-heavy.wav",
+            "printer-story-sfx-showcase.wav",
         ],
     }
     root_wavs_before = set(ROOT.glob("*.wav"))
@@ -193,3 +214,49 @@ def test_analyze_doors_writes_waveform_and_physical_metrics(tmp_path: Path) -> N
         "hinge_f0_max_hz",
     ):
         assert metric in content.splitlines()[0]
+
+
+def test_printer_quality_gallery_combined_wav_contains_every_item(tmp_path: Path) -> None:
+    root_wavs_before = set(ROOT.glob("*.wav"))
+    output_dir = tmp_path / "printer-gallery"
+    _run_example("printer_quality_gallery.py", output_dir)
+    items = (
+        "01-printer-print-one-normal.wav",
+        "02-printer-print-three-normal.wav",
+        "03-printer-print-one-fast.wav",
+        "04-printer-tray-open-full.wav",
+        "05-printer-tray-open-empty.wav",
+        "06-printer-power-off.wav",
+        "07-printer-power-on.wav",
+        "08-printer-restart-normal.wav",
+        "09-printer-wake-light.wav",
+        "10-pen-write-normal.wav",
+        "11-pen-write-fast-light.wav",
+        "12-pen-write-slow-heavy.wav",
+    )
+    item_frames = 0
+    for filename in items:
+        with wave.open(str(output_dir / filename), "rb") as audio:
+            item_frames += audio.getnframes()
+    with wave.open(str(output_dir / "printer-story-sfx-showcase.wav"), "rb") as audio:
+        assert audio.getnchannels() == 1
+        assert audio.getframerate() == 24_000
+        gap_frames = round(0.55 * audio.getframerate())
+        assert audio.getnframes() == item_frames + gap_frames * (len(items) - 1)
+    assert set(ROOT.glob("*.wav")) == root_wavs_before
+
+
+def test_printer_story_uses_all_new_semantic_sfx_families() -> None:
+    story = (ROOT / "examples" / "printer_story.ssmd").read_text(encoding="utf-8")
+    for effect in (
+        "printer.print",
+        "printer.tray_open",
+        "printer.power_switch",
+        "printer.restart",
+        "printer.wake",
+        "pen.write",
+    ):
+        assert f"sfx:{effect}?" in story
+    for seed in ("301", "302", "303", "304", "305", "306", "311"):
+        assert f"seed={seed}" in story
+    assert story.count('src="sfx:') == 8
