@@ -42,16 +42,30 @@ sfxrender 'sfx:door.open?material=wood&speed=slow&creak=0.75&seed=31' -o open.wa
 sfxrender 'sfx:door.close?material=wood&speed=fast&force=0.85&creak=0.2&seed=31' -o close.wav
 ```
 
-## SSMD-facing form
+## Using SFXRender as an application media resolver
 
-SFXRender is designed around URIs that can live in SSMD `src` attributes:
+SFXRender provides `SFXRenderer.render_uri()` as the stable entry point for consuming applications such as Readio. Construct it with the source rendering rate, pass the complete `sfx:` URI, and consume the returned mono `float32` PCM:
+
+```python
+from sfxrender import SFXRenderer
+
+renderer = SFXRenderer(sample_rate=24_000)
+
+result = renderer.render_uri(
+    "sfx:impact.knock?material=oak&count=3&force=0.7&seed=42"
+)
+pcm = result.samples
+```
+
+The result also provides `sample_rate`, `duration`, and the parsed `spec`; `sfxrender.__version__` is available for renderer/package cache provenance. URI, effect, and parameter failures use public SFXRender exceptions so applications can map them to stable diagnostics.
+
+An SSMD author can use the same source URI in a `src` attribute:
 
 ```ssmd
 [three knocks]{src="sfx:impact.knock?material=oak&count=3&force=0.7&seed=42"}
 ```
 
-Readio can later resolve `sfx:` sources through this package while leaving ordinary file or
-HTTP audio sources unchanged.
+SFXRender does **not** parse SSMD. The consuming application parses its document and resolves the URI by calling SFXRender; SFXRender returns PCM. The complete `sfx:` URI is the cross-library integration boundary and procedural-source identity. The application remains responsible for dispatching other sources such as files or HTTP URLs.
 
 ## Built-in MVP effects
 
@@ -65,7 +79,7 @@ Built-in footsteps and knocks use deterministic, NumPy-only procedural synthesis
 
 Door effects use a shared effective assembly with stable panel/frame resonances, inertia-loaded hinge friction, spatial roughness, and physical latch/stop contacts. Open and close actions excite the same generated door differently; matching material and seed intentionally identify the same object. Semantic controls such as `speed`, `creak`, and `force` alter its motion/contact behavior without changing the public URI/API.
 
-Built-in renderers ignore unknown query parameters so callers can preserve forward-compatible URI fields; misspelled parameters are therefore not rejected.
+Built-in renderers validate parameter names and values against SFXRender's effect catalog; unknown names and invalid values raise public typed errors instead of being silently ignored.
 
 ## Effective models and reference calibration
 

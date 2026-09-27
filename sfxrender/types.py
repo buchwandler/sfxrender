@@ -34,7 +34,7 @@ class RenderContext:
 
 @dataclass(frozen=True, slots=True)
 class RenderedSound:
-    """Rendered mono floating-point PCM."""
+    """Non-empty, finite, normalized mono float32 PCM and its render metadata."""
 
     samples: FloatAudio
     sample_rate: int

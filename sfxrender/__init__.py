@@ -6,8 +6,15 @@ from importlib.metadata import PackageNotFoundError, version
 
 from .catalog import catalog
 from .core import EffectRenderer, SFXRenderer
+from .errors import (
+    InvalidEffectParameterError,
+    SFXRenderError,
+    SFXURIError,
+    SfxUriError,
+    UnknownEffectError,
+)
 from .types import RenderContext, RenderedSound, SfxSpec
-from .uri import SfxUriError, parse_sfx_uri
+from .uri import parse_sfx_uri
 
 try:
     __version__ = version("sfxrender")
@@ -16,11 +23,15 @@ except PackageNotFoundError:  # Source checkout without an installed distributio
 
 __all__ = [
     "EffectRenderer",
+    "InvalidEffectParameterError",
     "RenderContext",
     "RenderedSound",
+    "SFXRenderError",
     "SFXRenderer",
+    "SFXURIError",
     "SfxSpec",
     "SfxUriError",
+    "UnknownEffectError",
     "__version__",
     "catalog",
     "parse_sfx_uri",

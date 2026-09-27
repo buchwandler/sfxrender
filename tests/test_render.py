@@ -1,9 +1,15 @@
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 import numpy as np
 import pytest
 
-from sfxrender import SFXRenderer
+from sfxrender import (
+    InvalidEffectParameterError,
+    SFXRenderer,
+    UnknownEffectError,
+    __version__,
+)
 from sfxrender._foley_profiles import AGGREGATE_SURFACE_PROFILES
 from sfxrender._footsteps import _sample_particle_events, _synthetic_grf
 from sfxrender.procedural import _event_starts
@@ -15,13 +21,10 @@ def test_knock_is_deterministic() -> None:
     uri = "sfx:impact.knock?material=oak&count=3&force=0.7&seed=42"
     first = renderer.render_uri(uri)
     second = renderer.render_uri(uri)
-    np.testing.assert_array_equal(first.samples, second.samples)
-    assert first.samples.dtype == np.float32
-    assert first.sample_rate == 16_000
-    assert first.duration > 0.4
+    assert first.samples.tobytes() == second.samples.tobytes()
 
 
-def test_different_seed_changes_output() -> None:
+def test_seed_changes_stochastic_output() -> None:
     renderer = SFXRenderer()
     first = renderer.render_uri("sfx:footsteps.walk?count=3&seed=1")
     second = renderer.render_uri("sfx:footsteps.walk?count=3&seed=2")
@@ -42,6 +45,34 @@ def test_builtin_effects_render() -> None:
         assert sound.samples.ndim == 1
         assert sound.samples.size > 0
         assert float(np.max(np.abs(sound.samples))) <= 1.0
+
+
+@pytest.mark.parametrize("sample_rate", [22_050, 24_000, 44_100, 48_000])
+def test_requested_sample_rate_is_honored(sample_rate: int) -> None:
+    rendered = SFXRenderer(sample_rate=sample_rate).render_uri(
+        "sfx:impact.knock?material=oak&seed=42"
+    )
+    assert rendered.sample_rate == sample_rate
+
+
+def test_pcm_contract_and_result_metadata() -> None:
+    rendered = SFXRenderer(sample_rate=24_000).render_uri("sfx:impact.knock?seed=42")
+    assert rendered.samples.dtype == np.float32
+    assert rendered.samples.ndim == 1
+    assert rendered.samples.size > 0
+    assert np.isfinite(rendered.samples).all()
+    assert float(np.max(np.abs(rendered.samples))) <= 1.0
+    assert rendered.duration == rendered.samples.size / rendered.sample_rate
+    assert rendered.spec.effect == "impact.knock"
+
+
+def test_package_version_matches_distribution_metadata() -> None:
+    try:
+        installed_version = version("sfxrender")
+    except PackageNotFoundError:
+        assert __version__ == "0+unknown"
+    else:
+        assert __version__ == installed_version
 
 
 def test_write_wav(tmp_path: Path) -> None:
@@ -102,7 +133,27 @@ def test_all_builtins_are_finite_float32_mono_and_wav_bounded() -> None:
     ],
 )
 def test_malformed_numeric_parameters_have_context(uri: str, message: str) -> None:
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises(InvalidEffectParameterError, match=message):
+        SFXRenderer().render_uri(uri)
+
+
+def test_unknown_effect_is_a_typed_error() -> None:
+    with pytest.raises(UnknownEffectError, match="unknown SFX effect 'not.real'"):
+        SFXRenderer().render_uri("sfx:not.real?seed=42")
+
+
+@pytest.mark.parametrize(
+    ("uri", "message"),
+    [
+        ("sfx:impact.knock?unknown=1", "unknown parameter"),
+        ("sfx:impact.knock?count=three", "count must be an integer"),
+        ("sfx:impact.knock?force=4.0", "expected a value in 0.05..1.0"),
+        ("sfx:impact.knock?seed=not-a-number", "non-negative integer"),
+        ("sfx:impact.knock?seed=-1", "non-negative integer"),
+    ],
+)
+def test_invalid_effect_parameters_are_typed(uri: str, message: str) -> None:
+    with pytest.raises(InvalidEffectParameterError, match=message):
         SFXRenderer().render_uri(uri)
 
 

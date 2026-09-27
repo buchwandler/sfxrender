@@ -14,6 +14,11 @@ _BUILTIN_CATALOG: dict[str, dict[str, Any]] = {
                 "values": ["wood", "oak", "metal", "wall"],
                 "default": "wood",
             },
+            "impactor": {
+                "type": "enum",
+                "values": ["fingertip", "knuckle", "wooden_object", "metal_object"],
+                "default": "knuckle",
+            },
             "count": {"type": "integer", "minimum": 1, "maximum": 16, "default": 1},
             "force": {"type": "number", "minimum": 0.05, "maximum": 1.0, "default": 0.65},
             "interval": {"type": "seconds", "minimum": 0.08, "maximum": 2.0, "default": 0.22},
