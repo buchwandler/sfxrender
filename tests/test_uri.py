@@ -11,6 +11,13 @@ def test_parse_sfx_uri() -> None:
     assert spec.seed == 42
 
 
+@pytest.mark.parametrize("uri", ["sfx:impact.knock", "sfx:impact.knock?"])
+def test_empty_query_is_accepted(uri: str) -> None:
+    spec = parse_sfx_uri(uri)
+    assert spec.effect == "impact.knock"
+    assert spec.parameters == {}
+
+
 def test_uri_error_alias_remains_compatible() -> None:
     assert SfxUriError is SFXURIError
 

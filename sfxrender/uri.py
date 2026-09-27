@@ -38,12 +38,16 @@ def parse_sfx_uri(uri: str) -> SfxSpec:
 
     params: dict[str, str] = {}
     try:
-        query_params = parse_qsl(
-            parts.query,
-            keep_blank_values=True,
-            strict_parsing=True,
-            encoding="utf-8",
-            errors="strict",
+        query_params = (
+            parse_qsl(
+                parts.query,
+                keep_blank_values=True,
+                strict_parsing=True,
+                encoding="utf-8",
+                errors="strict",
+            )
+            if parts.query
+            else []
         )
     except (UnicodeDecodeError, ValueError) as exc:
         raise SFXURIError(f"Malformed SFX URI query: {exc}") from exc
