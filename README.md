@@ -53,8 +53,10 @@ HTTP audio sources unchanged.
 - `phone.ring`
 - `door.open`
 
-The sound design is deliberately simple. The API and deterministic URI contract are the
-important parts of the MVP.
+Built-in footsteps and knocks use layered, deterministic procedural synthesis rather than bundled
+recordings: footsteps combine heel/body, surface response, and delayed sole contacts, while knocks
+combine physical contact, a panel/body response, inharmonic modes, and colored diffusion. Walking
+uses subtle seeded timing variation; repeated renders with the same URI remain reproducible.
 
 Built-in renderers ignore unknown query parameters so callers can preserve forward-compatible URI fields; misspelled parameters are therefore not rejected.
 
@@ -69,17 +71,30 @@ python examples/render_catalog.py
 
 Individual WAVs and `00-catalog-showcase.wav` are written to `example-artifacts/`. Generated WAV and JSON files there are intentionally gitignored; the tracked `.gitkeep` preserves the output directory.
 
+Run the focused Foley comparison gallery with:
+
+```bash
+python examples/foley_quality_gallery.py
+```
+
+It writes six footsteps, four knocks, and a combined `foley-quality-showcase.wav` to
+`example-artifacts/`; the showcase leaves 550 ms between cases. Third-party recordings used
+for local listening or measurement belong under the gitignored `reference-audio/` directory.
+They are not fetched, committed, included in tests, or packaged.
+
 ## Examples
 
 - [`examples/render_catalog.py`](examples/render_catalog.py) — individual catalog renders and a combined showcase.
 - [`examples/audiobook_scene.py`](examples/audiobook_scene.py) — a short composed arrival scene with footsteps, knocks, and a door opening.
 - [`examples/parameter_gallery.py`](examples/parameter_gallery.py) — same-seed comparisons of knock materials and walking surfaces.
+- [`examples/foley_quality_gallery.py`](examples/foley_quality_gallery.py) — fixed-seed Foley surface, footwear, and knock comparisons.
 
 Run the other examples after installation:
 
 ```bash
 python examples/audiobook_scene.py
 python examples/parameter_gallery.py
+python examples/foley_quality_gallery.py
 ```
 
 ## Extension

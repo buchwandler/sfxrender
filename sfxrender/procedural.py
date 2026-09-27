@@ -39,34 +39,208 @@ def _limit_peak(signal: FloatAudio, peak: float = 0.95) -> FloatAudio:
     return np.asarray(signal, dtype=np.float32)
 
 
-def _resonant_impact(
-    *, sample_rate: int, rng: np.random.Generator, modes: tuple[tuple[float, float, float], ...]
+def _smooth(signal: FloatAudio, taps: int) -> FloatAudio:
+    """Apply a short moving-average low-pass without changing the signal length."""
+    if signal.size == 0:
+        return signal.copy()
+    taps = max(1, min(int(taps), signal.size))
+    if taps == 1:
+        return signal.copy()
+    kernel = np.full(taps, 1.0 / taps, dtype=np.float32)
+    full = np.convolve(signal, kernel, mode="full")
+    start = (taps - 1) // 2
+    return full[start : start + signal.size].astype(np.float32)
+
+
+def _mix_at(destination: FloatAudio, source: FloatAudio, start: int) -> None:
+    """Add a source event into a destination, clipping safely at either end."""
+    if start < 0:
+        source = source[-start:]
+        start = 0
+    if start >= destination.size or source.size == 0:
+        return
+    end = min(destination.size, start + source.size)
+    destination[start:end] += source[: end - start]
+
+
+def _unit_rms(signal: FloatAudio) -> FloatAudio:
+    rms = float(np.sqrt(np.mean(np.square(signal, dtype=np.float64)))) if signal.size else 0.0
+    if rms <= 1e-12:
+        return signal.copy()
+    return np.asarray(signal / np.float32(rms), dtype=np.float32)
+
+
+def _colored_burst(
+    rng: np.random.Generator,
+    sample_rate: int,
+    size: int,
+    *,
+    decay: float,
+    cutoff_hz: float,
+    brightness: float,
+    attack: float = 0.0006,
 ) -> FloatAudio:
-    """Synthesize one impact from varied body modes and a separate contact transient."""
-    duration = max(decay for _, decay, _ in modes) * 5.0
-    n = max(1, int(duration * sample_rate))
-    t = np.arange(n, dtype=np.float32) / np.float32(sample_rate)
-    body = np.zeros(n, dtype=np.float32)
-    phase = rng.uniform(-0.22, 0.22, size=len(modes))
-    frequency_scale = float(rng.uniform(0.975, 1.025))
-    for index, (frequency, decay, gain) in enumerate(modes):
-        varied_frequency = frequency * frequency_scale * float(rng.uniform(0.992, 1.008))
-        varied_decay = decay * float(rng.uniform(0.9, 1.1))
-        envelope = np.exp(-t / np.float32(varied_decay))
+    """Make a deterministic noise burst with a controllable soft/bright balance."""
+    if size <= 0:
+        return np.zeros(0, dtype=np.float32)
+    white = rng.normal(0.0, 1.0, size).astype(np.float32)
+    low_taps = max(2, int(sample_rate / max(2.0 * cutoff_hz, 1.0)))
+    low = _unit_rms(_smooth(white, low_taps))
+    high_taps = max(2, int(sample_rate / 4500.0))
+    high = _unit_rms(white - _smooth(white, high_taps))
+    mix = float(np.clip(brightness, 0.0, 1.0))
+    colored = low * np.float32(1.0 - mix) + high * np.float32(mix)
+    t = np.arange(size, dtype=np.float32) / np.float32(sample_rate)
+    envelope = np.exp(-t / np.float32(max(decay, 1.0 / sample_rate)))
+    attack_env = 1.0 - np.exp(-t / np.float32(max(attack, 1.0 / sample_rate)))
+    return np.asarray(colored * envelope * attack_env, dtype=np.float32)
+
+
+def _modal_bank(
+    t: FloatAudio,
+    rng: np.random.Generator,
+    modes: tuple[tuple[float, float, float], ...],
+    *,
+    frequency_jitter: float,
+    decay_jitter: float,
+) -> FloatAudio:
+    """Sum independently varied, deliberately inharmonic damped body modes."""
+    body = np.zeros(t.size, dtype=np.float32)
+    if t.size == 0:
+        return body
+    for frequency, decay, gain in modes:
+        varied_frequency = frequency * float(
+            rng.uniform(1.0 - frequency_jitter, 1.0 + frequency_jitter)
+        )
+        varied_decay = decay * float(rng.uniform(1.0 - decay_jitter, 1.0 + decay_jitter))
+        phase = float(rng.uniform(-math.pi, math.pi))
+        envelope = np.exp(-t / np.float32(max(varied_decay, 1.0 / 48_000)))
         body += (
             np.float32(gain)
             * envelope
-            * np.sin(np.float32(2.0 * math.pi * varied_frequency) * t + np.float32(phase[index]))
+            * np.sin(np.float32(2.0 * math.pi * varied_frequency) * t + np.float32(phase))
         )
+    return body
 
-    noise = rng.normal(0.0, 1.0, n).astype(np.float32)
-    high_component = noise - np.roll(noise, 1)
-    high_component[0] = noise[0]
-    contact_env = np.exp(-t / np.float32(0.0025))
-    surface_env = np.exp(-t / np.float32(0.018))
-    hit = body * np.float32(0.82)
-    hit += noise * contact_env * np.float32(rng.uniform(0.12, 0.2))
-    hit += high_component * surface_env * np.float32(0.025)
+
+def _event_starts(
+    *,
+    count: int,
+    interval: float,
+    sample_rate: int,
+    spec: SfxSpec,
+    jitter_fraction: float,
+) -> list[int]:
+    """Return seeded, bounded event starts around a nominal interval."""
+    if count <= 0:
+        return []
+    rng = _rng(spec, 91_337)
+    starts = [0]
+    for _ in range(1, count):
+        variation = float(rng.normal(0.0, max(0.0, jitter_fraction)))
+        gap = interval * float(np.clip(1.0 + variation, 0.86, 1.14))
+        starts.append(starts[-1] + max(1, round(gap * sample_rate)))
+    return starts
+
+
+def _chirped_body(
+    sample_rate: int,
+    size: int,
+    rng: np.random.Generator,
+    *,
+    start_frequency: float,
+    end_frequency: float,
+    decay: float,
+    gain: float,
+) -> FloatAudio:
+    t = np.arange(size, dtype=np.float32) / np.float32(sample_rate)
+    duration = max(float(t[-1]) if t.size else 0.0, 1.0 / sample_rate)
+    phase = (
+        2.0
+        * math.pi
+        * (start_frequency * t + 0.5 * (end_frequency - start_frequency) / duration * t * t)
+    )
+    phase_offset = np.float32(rng.uniform(-math.pi, math.pi))
+    envelope = np.exp(-t / np.float32(max(decay, 1.0 / sample_rate)))
+    return np.asarray(np.sin(phase + phase_offset) * envelope * np.float32(gain), dtype=np.float32)
+
+
+def _knock_hit(
+    *,
+    sample_rate: int,
+    rng: np.random.Generator,
+    modes: tuple[tuple[float, float, float], ...],
+    body_profile: tuple[float, float, float, float],
+    contact_brightness: float,
+    contact_gain: float,
+    diffusion_brightness: float,
+    diffusion_gain: float,
+) -> FloatAudio:
+    longest_decay = max(decay for _, decay, _ in modes)
+    duration = max(0.24, longest_decay * 5.0 + 0.055)
+    size = max(1, round(duration * sample_rate))
+    t = np.asarray(np.arange(size, dtype=np.float32) / np.float32(sample_rate), dtype=np.float32)
+    start_frequency, end_frequency, body_decay, body_gain = body_profile
+    frequency_scale = float(rng.uniform(0.975, 1.025))
+    body = _chirped_body(
+        sample_rate,
+        size,
+        rng,
+        start_frequency=start_frequency * frequency_scale,
+        end_frequency=end_frequency * frequency_scale,
+        decay=body_decay * float(rng.uniform(0.9, 1.1)),
+        gain=body_gain,
+    )
+    modes_layer = _modal_bank(
+        t,
+        rng,
+        modes,
+        frequency_jitter=0.035,
+        decay_jitter=0.11,
+    )
+    hit = body + modes_layer * np.float32(0.62)
+    hit += _colored_burst(
+        rng,
+        sample_rate,
+        size,
+        decay=float(rng.uniform(0.0025, 0.0045)),
+        cutoff_hz=1800.0,
+        brightness=contact_brightness,
+        attack=0.00025,
+    ) * np.float32(contact_gain * rng.uniform(0.88, 1.12))
+    hit += _colored_burst(
+        rng,
+        sample_rate,
+        size,
+        decay=float(rng.uniform(0.014, 0.022)),
+        cutoff_hz=1250.0,
+        brightness=max(0.08, contact_brightness * 0.55),
+        attack=0.0015,
+    ) * np.float32(contact_gain * 0.45)
+    diffusion = _colored_burst(
+        rng,
+        sample_rate,
+        size,
+        decay=0.075 if longest_decay < 0.12 else 0.11,
+        cutoff_hz=1700.0 if diffusion_brightness < 0.5 else 3600.0,
+        brightness=diffusion_brightness,
+        attack=0.001,
+    )
+    slow_taps = max(2, int(sample_rate * 0.035))
+    slow = _unit_rms(_smooth(rng.normal(0.0, 1.0, size).astype(np.float32), slow_taps))
+    hit += diffusion * np.float32(diffusion_gain) * (1.0 + np.float32(0.035) * slow)
+    if rng.random() < 0.24:
+        tap_size = max(1, int(0.014 * sample_rate))
+        tap = _colored_burst(
+            rng,
+            sample_rate,
+            tap_size,
+            decay=0.004,
+            cutoff_hz=2400.0,
+            brightness=min(0.9, contact_brightness + 0.15),
+            attack=0.0003,
+        ) * np.float32(contact_gain * rng.uniform(0.12, 0.22))
+        _mix_at(hit, tap, int(rng.uniform(0.012, 0.032) * sample_rate))
     return _normalize_template(hit)
 
 
@@ -76,24 +250,239 @@ def knock(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     count = integer(params, "count", 1, minimum=1, maximum=16)
     force = number(params, "force", 0.65, minimum=0.05, maximum=1.0)
     interval = number(params, "interval", 0.22, minimum=0.08, maximum=2.0)
-    modes_by_material = {
-        "wood": ((190.0, 0.065, 1.0), (430.0, 0.045, 0.55), (980.0, 0.025, 0.22)),
-        "oak": ((155.0, 0.085, 1.0), (360.0, 0.055, 0.52), (760.0, 0.032, 0.20)),
-        "metal": ((420.0, 0.14, 0.8), (1150.0, 0.18, 0.55), (2500.0, 0.09, 0.25)),
-        "wall": ((120.0, 0.045, 1.0), (260.0, 0.030, 0.35), (650.0, 0.018, 0.12)),
+    modes_by_material: dict[str, tuple[tuple[float, float, float], ...]] = {
+        "wood": (
+            (115.0, 0.070, 0.28),
+            (185.0, 0.090, 0.30),
+            (315.0, 0.065, 0.25),
+            (515.0, 0.050, 0.20),
+            (820.0, 0.030, 0.15),
+            (1250.0, 0.018, 0.09),
+        ),
+        "oak": (
+            (90.0, 0.095, 0.32),
+            (150.0, 0.115, 0.30),
+            (255.0, 0.085, 0.25),
+            (410.0, 0.060, 0.19),
+            (680.0, 0.038, 0.14),
+            (1080.0, 0.022, 0.08),
+        ),
+        "wall": (
+            (75.0, 0.035, 0.26),
+            (125.0, 0.045, 0.22),
+            (230.0, 0.030, 0.18),
+            (390.0, 0.022, 0.15),
+            (650.0, 0.015, 0.10),
+        ),
+        "metal": (
+            (260.0, 0.100, 0.20),
+            (430.0, 0.145, 0.19),
+            (710.0, 0.160, 0.17),
+            (1180.0, 0.130, 0.15),
+            (1900.0, 0.095, 0.13),
+            (3000.0, 0.055, 0.10),
+        ),
     }
+    body_by_material: dict[str, tuple[float, float, float, float]] = {
+        "wood": (135.0, 78.0, 0.075, 0.34),
+        "oak": (110.0, 72.0, 0.11, 0.40),
+        "wall": (90.0, 60.0, 0.038, 0.30),
+        "metal": (185.0, 125.0, 0.065, 0.18),
+    }
+    contact_brightness = {"wood": 0.42, "oak": 0.36, "wall": 0.58, "metal": 0.82}[material]
+    contact_gain = {"wood": 0.18, "oak": 0.17, "wall": 0.16, "metal": 0.22}[material]
+    diffusion_brightness = {"wood": 0.36, "oak": 0.30, "wall": 0.22, "metal": 0.70}[material]
+    diffusion_gain = {"wood": 0.11, "oak": 0.12, "wall": 0.15, "metal": 0.08}[material]
     modes = modes_by_material[material]
-    spacing = int(interval * context.sample_rate)
-    hit_size = int(max(decay for _, decay, _ in modes) * 5.0 * context.sample_rate)
-    total = spacing * (count - 1) + hit_size
+    starts = _event_starts(
+        count=count,
+        interval=interval,
+        sample_rate=context.sample_rate,
+        spec=spec,
+        jitter_fraction=0.008,
+    )
+    longest_decay = max(decay for _, decay, _ in modes)
+    hit_size = max(1, round(max(0.24, longest_decay * 5.0 + 0.055) * context.sample_rate))
+    total = starts[-1] + hit_size
     result = np.zeros(total, dtype=np.float32)
-    for index in range(count):
+    for index, start in enumerate(starts):
         rng = _rng(spec, index)
-        hit = _resonant_impact(sample_rate=context.sample_rate, rng=rng, modes=modes)
-        start = index * spacing
-        level = force * float(rng.uniform(0.92, 1.05))
-        result[start : start + hit.size] += hit * np.float32(level)
+        hit = _knock_hit(
+            sample_rate=context.sample_rate,
+            rng=rng,
+            modes=modes,
+            body_profile=body_by_material[material],
+            contact_brightness=contact_brightness,
+            contact_gain=contact_gain,
+            diffusion_brightness=diffusion_brightness,
+            diffusion_gain=diffusion_gain,
+        )
+        level = force * float(rng.uniform(0.94, 1.04))
+        _mix_at(result, hit * np.float32(level), start)
     return RenderedSound(_limit_peak(result), context.sample_rate, spec)
+
+
+def _footstep_hit(
+    *,
+    sample_rate: int,
+    surface: str,
+    footwear: str,
+    rng: np.random.Generator,
+    force: float,
+    side: float,
+) -> FloatAudio:
+    """Synthesize one short heel-to-sole event with surface and footwear mechanics."""
+    surface_modes: dict[str, tuple[tuple[float, float, float], ...]] = {
+        "wood": (
+            (145.0, 0.100, 0.38),
+            (275.0, 0.078, 0.32),
+            (520.0, 0.052, 0.24),
+            (830.0, 0.035, 0.15),
+            (1180.0, 0.024, 0.08),
+        ),
+        "stone": (
+            (180.0, 0.055, 0.28),
+            (370.0, 0.045, 0.23),
+            (690.0, 0.033, 0.20),
+            (1280.0, 0.023, 0.16),
+            (1850.0, 0.015, 0.10),
+        ),
+        "carpet": (
+            (90.0, 0.045, 0.30),
+            (175.0, 0.032, 0.23),
+            (320.0, 0.023, 0.14),
+        ),
+        "gravel": (
+            (125.0, 0.038, 0.20),
+            (250.0, 0.030, 0.14),
+            (480.0, 0.022, 0.10),
+        ),
+    }
+    surface_profiles = {
+        "wood": (0.34, 0.13, 0.54, 0.36, 0.070),
+        "stone": (0.58, 0.11, 0.42, 0.47, 0.046),
+        "carpet": (0.08, 0.19, 0.34, 0.16, 0.090),
+        "gravel": (0.42, 0.09, 0.28, 0.38, 0.052),
+    }
+    footwear_profiles = {
+        "barefoot": (90.0, 63.0, 0.32, 0.095, 0.42, 0.42, -0.18, 0.292, 0.070),
+        "shoes": (122.0, 79.0, 0.35, 0.070, 0.64, 0.55, 0.02, 0.265, 0.052),
+        "boots": (108.0, 68.0, 0.44, 0.100, 0.74, 0.70, -0.04, 0.305, 0.058),
+        "heels": (185.0, 125.0, 0.17, 0.040, 0.95, 0.90, 0.35, 0.245, 0.064),
+    }
+    (surface_brightness, texture_gain, modal_gain, surface_contact, surface_decay) = (
+        surface_profiles[surface]
+    )
+    (
+        start_frequency,
+        end_frequency,
+        body_gain,
+        body_decay,
+        heel_gain,
+        sole_gain,
+        footwear_brightness,
+        duration,
+        sole_delay,
+    ) = footwear_profiles[footwear]
+    size = max(1, round(duration * sample_rate))
+    t = np.asarray(np.arange(size, dtype=np.float32) / np.float32(sample_rate), dtype=np.float32)
+    force_level = float(np.clip((force - 0.05) / 0.95, 0.0, 1.0))
+    force_brightness = float(np.clip((force_level - 0.45) * 0.38, -0.18, 0.20))
+    brightness = float(
+        np.clip(surface_brightness + footwear_brightness + force_brightness, 0.03, 0.92)
+    )
+    body_scale = float(rng.uniform(0.98, 1.02)) * (1.0 + 0.012 * side)
+    body = _chirped_body(
+        sample_rate,
+        size,
+        rng,
+        start_frequency=start_frequency * body_scale,
+        end_frequency=end_frequency * body_scale,
+        decay=body_decay * float(rng.uniform(0.92, 1.12)),
+        gain=body_gain * (0.80 + 0.38 * force_level) * (1.0 + 0.025 * side),
+    )
+    modes = _modal_bank(
+        t,
+        rng,
+        surface_modes[surface],
+        frequency_jitter=0.025,
+        decay_jitter=0.12,
+    )
+    hit = body + modes * np.float32(modal_gain * (0.82 + 0.30 * force_level))
+    heel = _colored_burst(
+        rng,
+        sample_rate,
+        size,
+        decay=0.0030 if footwear == "heels" else 0.0045,
+        cutoff_hz=1600.0 if surface == "carpet" else 2600.0,
+        brightness=brightness,
+        attack=0.00022,
+    )
+    hit += heel * np.float32(heel_gain * surface_contact * (0.68 + 0.65 * force_level))
+    surface_texture = _colored_burst(
+        rng,
+        sample_rate,
+        size,
+        decay=max(surface_decay, body_decay),
+        cutoff_hz=950.0 if surface in {"wood", "carpet"} else 1700.0,
+        brightness=min(0.72, brightness * 0.72),
+        attack=0.003,
+    )
+    hit += surface_texture * np.float32(texture_gain)
+    side_delay = int(side * 0.0015 * sample_rate)
+    delayed_start = max(
+        1, int((sole_delay + side_delay + rng.uniform(-0.004, 0.004)) * sample_rate)
+    )
+    sole_size = max(1, size - delayed_start)
+    sole = _colored_burst(
+        rng,
+        sample_rate,
+        sole_size,
+        decay=0.018 if footwear == "heels" else 0.030,
+        cutoff_hz=2100.0 if footwear in {"shoes", "heels"} else 1250.0,
+        brightness=float(np.clip(brightness + (0.12 if footwear == "heels" else 0.0), 0.03, 0.95)),
+        attack=0.001,
+    ) * np.float32(sole_gain * (0.78 + 0.38 * force_level))
+    sole_body = _chirped_body(
+        sample_rate,
+        sole_size,
+        rng,
+        start_frequency=start_frequency * (1.55 if footwear == "heels" else 1.22),
+        end_frequency=end_frequency * 1.18,
+        decay=0.028 if surface != "wood" else 0.042,
+        gain=0.16 if footwear != "heels" else 0.10,
+    )
+    _mix_at(hit, sole + sole_body, delayed_start)
+    if surface == "gravel":
+        grain_count = int(rng.integers(6, 16))
+        for _ in range(grain_count):
+            grain_size = max(2, int(rng.uniform(0.003, 0.013) * sample_rate))
+            grain = _colored_burst(
+                rng,
+                sample_rate,
+                grain_size,
+                decay=float(rng.uniform(0.0025, 0.008)),
+                cutoff_hz=float(rng.uniform(1200.0, 3000.0)),
+                brightness=float(rng.uniform(0.28, 0.72)),
+                attack=0.0002,
+            )
+            grain *= np.float32(rng.uniform(0.06, 0.19) * (0.65 + 0.55 * force_level))
+            grain_start = int(rng.uniform(0.012, min(0.17, duration - 0.02)) * sample_rate)
+            _mix_at(hit, grain, grain_start)
+    elif rng.random() < 0.42 and footwear != "heels":
+        release_start = int(rng.uniform(0.105, min(0.17, duration - 0.03)) * sample_rate)
+        release_size = max(1, size - release_start)
+        release = _colored_burst(
+            rng,
+            sample_rate,
+            release_size,
+            decay=0.035,
+            cutoff_hz=1000.0 if footwear == "barefoot" else 1800.0,
+            brightness=float(np.clip(brightness * 0.70, 0.05, 0.7)),
+            attack=0.004,
+        ) * np.float32(0.08 if footwear == "barefoot" else 0.06)
+        _mix_at(hit, release, release_start)
+    return _normalize_template(hit, peak=0.72)
 
 
 def footsteps(spec: SfxSpec, context: RenderContext) -> RenderedSound:
@@ -103,52 +492,30 @@ def footsteps(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     count = integer(params, "count", 4, minimum=1, maximum=64)
     force = number(params, "force", 0.6, minimum=0.05, maximum=1.0)
     interval = number(params, "interval", 0.52, minimum=0.18, maximum=2.0)
-
-    base_frequency = {"barefoot": 95.0, "shoes": 130.0, "boots": 105.0, "heels": 210.0}[footwear]
-    surface_texture = {"wood": 0.08, "stone": 0.12, "gravel": 0.32, "carpet": 0.045}[surface]
-    decay = {"wood": 0.055, "stone": 0.035, "gravel": 0.045, "carpet": 0.028}[surface]
-    footwear_click = {"barefoot": 0.025, "shoes": 0.07, "boots": 0.095, "heels": 0.18}[footwear]
-    hit_size = max(1, int(0.18 * context.sample_rate))
-    t = np.arange(hit_size, dtype=np.float32) / np.float32(context.sample_rate)
-    spacing = int(interval * context.sample_rate)
-    total = spacing * (count - 1) + hit_size
-    result = np.zeros(total, dtype=np.float32)
-
-    for index in range(count):
+    starts = _event_starts(
+        count=count,
+        interval=interval,
+        sample_rate=context.sample_rate,
+        spec=spec,
+        jitter_fraction=0.04,
+    )
+    duration = {"barefoot": 0.292, "shoes": 0.265, "boots": 0.305, "heels": 0.245}[footwear]
+    hit_size = max(1, round(duration * context.sample_rate))
+    result = np.zeros(starts[-1] + hit_size, dtype=np.float32)
+    for index, start in enumerate(starts):
         rng = _rng(spec, index)
-        step_decay = decay * float(rng.uniform(0.9, 1.12))
-        frequency = base_frequency * float(rng.uniform(0.94, 1.06))
         side = -1.0 if index % 2 else 1.0
-        phase = float(rng.uniform(-0.12, 0.12))
-        envelope = np.exp(-t / np.float32(step_decay))
-        body = np.sin(np.float32(2.0 * math.pi * frequency) * t + np.float32(phase))
-        body *= envelope * np.float32(0.67 + 0.025 * side)
-
-        noise = rng.normal(0.0, 1.0, hit_size).astype(np.float32)
-        high_component = noise - np.roll(noise, 1)
-        high_component[0] = noise[0]
-        contact_env = np.exp(-t / np.float32(0.0035))
-        texture_env = np.exp(-t / np.float32(max(0.014, step_decay * 0.75)))
-        contact = noise * contact_env * np.float32(0.18)
-        texture = noise * texture_env * np.float32(surface_texture)
-        texture += high_component * texture_env * np.float32(0.025)
-        footwear_layer = high_component * contact_env * np.float32(footwear_click)
-        if footwear == "heels":
-            heel_freq = float(rng.uniform(1400.0, 1900.0))
-            footwear_layer += np.sin(2.0 * math.pi * heel_freq * t) * contact_env * np.float32(0.12)
-
-        hit = _normalize_template(body + contact + texture + footwear_layer, peak=0.72)
-        if surface == "gravel":
-            click_mask = rng.random(hit_size) < (28.0 / context.sample_rate)
-            clicks = click_mask.astype(np.float32) * rng.uniform(0.2, 0.75, hit_size).astype(
-                np.float32
-            )
-            hit += clicks * np.exp(-t / np.float32(0.012)) * np.float32(0.18)
-        local_force = force * float(rng.uniform(0.94, 1.06))
-        start = index * spacing
-        result[start : start + hit_size] += hit * np.float32(local_force)
-
-    result = _fade_out(result, context.sample_rate, 0.03)
+        hit = _footstep_hit(
+            sample_rate=context.sample_rate,
+            surface=surface,
+            footwear=footwear,
+            rng=rng,
+            force=force,
+            side=side,
+        )
+        local_force = force * float(rng.uniform(0.95, 1.05)) * (1.0 + 0.025 * side)
+        _mix_at(result, hit * np.float32(local_force), start)
+    result = _fade_out(result, context.sample_rate, 0.025)
     return RenderedSound(_limit_peak(result), context.sample_rate, spec)
 
 

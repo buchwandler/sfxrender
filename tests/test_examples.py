@@ -30,6 +30,19 @@ def test_examples_write_reproducible_wavs_only_to_requested_directory(tmp_path: 
             "gallery-knock-materials.wav",
             "gallery-footstep-surfaces.wav",
         ],
+        "foley_quality_gallery.py": [
+            "footsteps-wood-boots.wav",
+            "footsteps-wood-shoes.wav",
+            "footsteps-stone-shoes.wav",
+            "footsteps-stone-heels.wav",
+            "footsteps-carpet-barefoot.wav",
+            "footsteps-gravel-boots.wav",
+            "knock-wood.wav",
+            "knock-oak.wav",
+            "knock-wall.wav",
+            "knock-metal.wav",
+            "foley-quality-showcase.wav",
+        ],
     }
     root_wavs_before = set(ROOT.glob("*.wav"))
 
@@ -49,3 +62,17 @@ def test_examples_write_reproducible_wavs_only_to_requested_directory(tmp_path: 
         assert audio.getnframes() > 0
         assert audio.getnchannels() == 1
     assert set(ROOT.glob("*.wav")) == root_wavs_before
+
+    gallery_names = scripts["foley_quality_gallery.py"]
+    gallery_dir = tmp_path / "foley_quality_gallery"
+    individual_frames = 0
+    for filename in gallery_names[:-1]:
+        with wave.open(str(gallery_dir / filename), "rb") as audio:
+            individual_frames += audio.getnframes()
+    with wave.open(str(gallery_dir / gallery_names[-1]), "rb") as audio:
+        assert audio.getnchannels() == 1
+        assert audio.getframerate() == 24_000
+        expected_frames = individual_frames + int(0.55 * audio.getframerate()) * (
+            len(gallery_names) - 2
+        )
+        assert audio.getnframes() == expected_frames
