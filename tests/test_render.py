@@ -4,6 +4,8 @@ import numpy as np
 import pytest
 
 from sfxrender import SFXRenderer
+from sfxrender._foley_profiles import AGGREGATE_SURFACE_PROFILES
+from sfxrender._footsteps import _sample_particle_events, _synthetic_grf
 from sfxrender.procedural import _event_starts
 from sfxrender.types import SfxSpec
 
@@ -58,6 +60,7 @@ def _rms(samples: np.ndarray) -> float:
     [
         ("impact.knock", "material=oak&count=3"),
         ("footsteps.walk", "surface=wood&count=4"),
+        ("footsteps.walk", "surface=gravel&footwear=boots&count=1"),
     ],
 )
 def test_force_has_meaningful_level_effect(effect: str, parameters: str) -> None:
@@ -231,3 +234,133 @@ def test_knock_materials_have_distinct_decay_lengths() -> None:
     wall = renderer.render_uri("sfx:impact.knock?material=wall&count=1&seed=42")
     assert oak.duration > wood.duration
     assert wall.duration < wood.duration
+
+
+def _dominant_bin_fraction(samples: np.ndarray) -> float:
+    windowed = samples * np.hanning(samples.size)
+    power = np.square(np.abs(np.fft.rfft(windowed)))
+    return float(power.max() / power.sum())
+
+
+def _spectral_centroid(samples: np.ndarray, sample_rate: int) -> float:
+    windowed = samples * np.hanning(samples.size)
+    power = np.square(np.abs(np.fft.rfft(windowed)))
+    frequencies = np.fft.rfftfreq(samples.size, 1.0 / sample_rate)
+    return float(np.sum(frequencies * power) / np.sum(power))
+
+
+def _window_rms(samples: np.ndarray, sample_rate: int, start: float, end: float) -> float:
+    segment = samples[int(start * sample_rate) : int(end * sample_rate)]
+    return _rms(segment)
+
+
+def test_synthetic_grf_is_seeded_and_has_heel_sole_toe_phases() -> None:
+    sample_rate = 16_000
+    grf = _synthetic_grf(
+        sample_rate=sample_rate,
+        footwear="boots",
+        force=0.58,
+        rng=np.random.default_rng(11),
+    )
+    repeated = _synthetic_grf(
+        sample_rate=sample_rate,
+        footwear="boots",
+        force=0.58,
+        rng=np.random.default_rng(11),
+    )
+    changed = _synthetic_grf(
+        sample_rate=sample_rate,
+        footwear="boots",
+        force=0.58,
+        rng=np.random.default_rng(12),
+    )
+    np.testing.assert_array_equal(grf, repeated)
+    assert not np.array_equal(grf, changed)
+    assert 0.22 <= grf.size / sample_rate <= 0.31
+    assert float(np.max(grf[: int(0.035 * sample_rate)])) > 0.0
+    assert float(np.max(grf[int(0.035 * sample_rate) : int(0.12 * sample_rate)])) > 0.0
+    assert float(np.max(grf[int(0.12 * sample_rate) : int(0.22 * sample_rate)])) > 0.0
+
+
+def test_wood_boots_avoid_bass_note_dominance_and_keep_contact_stages() -> None:
+    sample_rate = 16_000
+    sound = SFXRenderer(sample_rate=sample_rate).render_uri(
+        "sfx:footsteps.walk?surface=wood&footwear=boots&count=1&force=0.58&seed=11"
+    )
+    samples = sound.samples[: int(0.22 * sample_rate)]
+    assert _band_fraction(samples, sample_rate, 80.0, 200.0) < 0.70
+    assert _dominant_bin_fraction(samples) < 0.20
+    assert _band_fraction(samples, sample_rate, 200.0, 1_500.0) > 0.20
+    heel = _window_rms(samples, sample_rate, 0.0, 0.035)
+    sole = _window_rms(samples, sample_rate, 0.035, 0.12)
+    release = _window_rms(samples, sample_rate, 0.12, 0.22)
+    assert heel > 0.01
+    assert sole > heel * 0.5
+    assert release > heel * 0.25
+
+
+def test_footwear_changes_contact_weight_timing_and_brightness() -> None:
+    sample_rate = 16_000
+    renderer = SFXRenderer(sample_rate=sample_rate)
+    sounds = {
+        footwear: renderer.render_uri(
+            f"sfx:footsteps.walk?surface=wood&footwear={footwear}&count=1&force=0.62&seed=17"
+        ).samples
+        for footwear in ("barefoot", "shoes", "boots", "heels")
+    }
+    assert len({samples.size for samples in sounds.values()}) == 4
+    assert all(
+        not np.array_equal(sounds[left], sounds[right])
+        for left, right in (("barefoot", "shoes"), ("shoes", "boots"), ("boots", "heels"))
+    )
+    assert _rms(sounds["boots"]) > _rms(sounds["heels"]) * 1.5
+    assert _band_fraction(sounds["heels"], sample_rate, 2_000.0, 8_000.0) > (
+        _band_fraction(sounds["boots"], sample_rate, 2_000.0, 8_000.0) * 1.05
+    )
+
+
+def test_gravel_micro_impact_density_tracks_grf_and_energy_is_heavy_tailed() -> None:
+    sample_rate = 16_000
+    grf = np.concatenate(
+        (np.full(800, 0.85, dtype=np.float32), np.full(800, 0.08, dtype=np.float32))
+    )
+    events = _sample_particle_events(
+        grf=grf,
+        surface=AGGREGATE_SURFACE_PROFILES["gravel"],
+        rng=np.random.default_rng(91),
+        sample_rate=sample_rate,
+    )
+    high_load = sum(event.start_sample < 800 for event in events)
+    low_load = sum(event.start_sample >= 800 for event in events)
+    energies = np.asarray([event.energy for event in events])
+    profile = AGGREGATE_SURFACE_PROFILES["gravel"]
+    assert high_load > low_load
+    assert np.all(energies >= profile.minimum_energy)
+    assert np.all(energies <= profile.maximum_energy)
+    assert float(np.median(energies)) < (profile.minimum_energy + profile.maximum_energy) / 2
+
+
+def test_gravel_is_seeded_stochastic_and_broader_than_carpet() -> None:
+    sample_rate = 16_000
+    renderer = SFXRenderer(sample_rate=sample_rate)
+    gravel_uri = "sfx:footsteps.walk?surface=gravel&footwear=shoes&count=1&seed=18"
+    gravel = renderer.render_uri(gravel_uri).samples
+    repeated = renderer.render_uri(gravel_uri).samples
+    changed = renderer.render_uri(
+        "sfx:footsteps.walk?surface=gravel&footwear=shoes&count=1&seed=19"
+    ).samples
+    carpet = renderer.render_uri(
+        "sfx:footsteps.walk?surface=carpet&footwear=shoes&count=1&seed=18"
+    ).samples
+    np.testing.assert_array_equal(gravel, repeated)
+    assert not np.array_equal(gravel, changed)
+    assert _spectral_centroid(gravel, sample_rate) > (
+        _spectral_centroid(carpet, sample_rate) * 1.25
+    )
+
+
+def test_knocks_do_not_collapse_to_a_single_hollow_mode() -> None:
+    renderer = SFXRenderer(sample_rate=16_000)
+    for material in ("wood", "oak", "wall", "metal"):
+        sound = renderer.render_uri(f"sfx:impact.knock?material={material}&count=1&seed=31")
+        assert _dominant_bin_fraction(sound.samples) < 0.20

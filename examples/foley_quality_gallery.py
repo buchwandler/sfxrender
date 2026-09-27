@@ -10,27 +10,27 @@ from sfxrender import RenderedSound, SFXRenderer, SfxSpec
 
 FOLEY_ITEMS = (
     (
-        "footsteps-wood-boots.wav",
+        "01-footsteps-wood-boots.wav",
         "sfx:footsteps.walk?surface=wood&footwear=boots&count=6&force=0.62&interval=0.50&seed=401",
     ),
     (
-        "footsteps-wood-shoes.wav",
+        "02-footsteps-wood-shoes.wav",
         "sfx:footsteps.walk?surface=wood&footwear=shoes&count=6&force=0.62&interval=0.50&seed=402",
     ),
     (
-        "footsteps-stone-shoes.wav",
+        "03-footsteps-stone-shoes.wav",
         "sfx:footsteps.walk?surface=stone&footwear=shoes&count=6&force=0.62&interval=0.50&seed=403",
     ),
     (
-        "footsteps-stone-heels.wav",
+        "04-footsteps-stone-heels.wav",
         "sfx:footsteps.walk?surface=stone&footwear=heels&count=6&force=0.62&interval=0.50&seed=404",
     ),
     (
-        "footsteps-carpet-barefoot.wav",
+        "05-footsteps-carpet-barefoot.wav",
         "sfx:footsteps.walk?surface=carpet&footwear=barefoot&count=6&force=0.62&interval=0.50&seed=405",
     ),
     (
-        "footsteps-gravel-boots.wav",
+        "06-footsteps-gravel-boots.wav",
         "sfx:footsteps.walk?surface=gravel&footwear=boots&count=6&force=0.62&interval=0.50&seed=406",
     ),
     ("knock-wood.wav", "sfx:impact.knock?material=wood&count=3&force=0.68&interval=0.34&seed=411"),
@@ -43,22 +43,13 @@ FOLEY_ITEMS = (
 )
 
 
-def main(output_dir: str | Path | None = None) -> None:
-    """Write the fixed-seed individual Foley WAVs and a spaced comparison strip."""
-    destination = (
-        Path(output_dir)
-        if output_dir is not None
-        else Path(__file__).resolve().parents[1] / "example-artifacts"
-    )
-    destination.mkdir(parents=True, exist_ok=True)
-    renderer = SFXRenderer(sample_rate=24_000)
-    sounds: list[RenderedSound] = []
-    for filename, uri in FOLEY_ITEMS:
-        sound = renderer.render_uri(uri)
-        sound.write_wav(destination / filename)
-        sounds.append(sound)
-        print(f"Rendered {uri} -> {destination / filename}")
-
+def _write_showcase(
+    sounds: list[RenderedSound],
+    renderer: SFXRenderer,
+    destination: Path,
+    filename: str,
+    effect_name: str,
+) -> None:
     gap = np.zeros(int(0.55 * renderer.sample_rate), dtype=np.float32)
     parts: list[np.ndarray] = []
     for index, sound in enumerate(sounds):
@@ -68,11 +59,45 @@ def main(output_dir: str | Path | None = None) -> None:
     showcase = RenderedSound(
         np.concatenate(parts),
         renderer.sample_rate,
-        SfxSpec("example.foley_quality_showcase", {}),
+        SfxSpec(f"example.{effect_name}", {}),
     )
-    showcase_path = destination / "foley-quality-showcase.wav"
-    showcase.write_wav(showcase_path)
-    print(f"Wrote combined showcase -> {showcase_path}")
+    output_path = destination / filename
+    showcase.write_wav(output_path)
+    print(f"Wrote spaced showcase -> {output_path}")
+
+
+def main(output_dir: str | Path | None = None) -> None:
+    """Write fixed-seed individual Foley WAVs and the footstep/Foley strips."""
+    destination = (
+        Path(output_dir)
+        if output_dir is not None
+        else Path(__file__).resolve().parents[1] / "example-artifacts"
+    )
+    destination.mkdir(parents=True, exist_ok=True)
+    renderer = SFXRenderer(sample_rate=24_000)
+    sounds: list[RenderedSound] = []
+    footsteps: list[RenderedSound] = []
+    for index, (filename, uri) in enumerate(FOLEY_ITEMS):
+        sound = renderer.render_uri(uri)
+        sound.write_wav(destination / filename)
+        sounds.append(sound)
+        if index < 6:
+            footsteps.append(sound)
+        print(f"Rendered {uri} -> {destination / filename}")
+    _write_showcase(
+        footsteps,
+        renderer,
+        destination,
+        "foley-footsteps-showcase.wav",
+        "foley_footsteps_showcase",
+    )
+    _write_showcase(
+        sounds,
+        renderer,
+        destination,
+        "foley-quality-showcase.wav",
+        "foley_quality_showcase",
+    )
 
 
 if __name__ == "__main__":

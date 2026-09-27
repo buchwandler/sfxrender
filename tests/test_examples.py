@@ -31,16 +31,17 @@ def test_examples_write_reproducible_wavs_only_to_requested_directory(tmp_path: 
             "gallery-footstep-surfaces.wav",
         ],
         "foley_quality_gallery.py": [
-            "footsteps-wood-boots.wav",
-            "footsteps-wood-shoes.wav",
-            "footsteps-stone-shoes.wav",
-            "footsteps-stone-heels.wav",
-            "footsteps-carpet-barefoot.wav",
-            "footsteps-gravel-boots.wav",
+            "01-footsteps-wood-boots.wav",
+            "02-footsteps-wood-shoes.wav",
+            "03-footsteps-stone-shoes.wav",
+            "04-footsteps-stone-heels.wav",
+            "05-footsteps-carpet-barefoot.wav",
+            "06-footsteps-gravel-boots.wav",
             "knock-wood.wav",
             "knock-oak.wav",
             "knock-wall.wav",
             "knock-metal.wav",
+            "foley-footsteps-showcase.wav",
             "foley-quality-showcase.wav",
         ],
     }
@@ -66,13 +67,54 @@ def test_examples_write_reproducible_wavs_only_to_requested_directory(tmp_path: 
     gallery_names = scripts["foley_quality_gallery.py"]
     gallery_dir = tmp_path / "foley_quality_gallery"
     individual_frames = 0
-    for filename in gallery_names[:-1]:
+    for filename in gallery_names[:-2]:
         with wave.open(str(gallery_dir / filename), "rb") as audio:
             individual_frames += audio.getnframes()
     with wave.open(str(gallery_dir / gallery_names[-1]), "rb") as audio:
         assert audio.getnchannels() == 1
         assert audio.getframerate() == 24_000
-        expected_frames = individual_frames + int(0.55 * audio.getframerate()) * (
-            len(gallery_names) - 2
-        )
-        assert audio.getnframes() == expected_frames
+        gap_frames = int(0.55 * audio.getframerate())
+        assert audio.getnframes() == individual_frames + gap_frames * (len(gallery_names) - 3)
+
+    footstep_frames = 0
+    for filename in gallery_names[:6]:
+        with wave.open(str(gallery_dir / filename), "rb") as audio:
+            footstep_frames += audio.getnframes()
+    with wave.open(str(gallery_dir / gallery_names[-2]), "rb") as audio:
+        assert audio.getnframes() == footstep_frames + gap_frames * 5
+
+
+def test_analyze_foley_writes_deterministic_metrics_to_requested_directory(
+    tmp_path: Path,
+) -> None:
+    root_wavs_before = set(ROOT.glob("*.wav"))
+    first_dir = tmp_path / "analysis"
+    second_dir = tmp_path / "repeat-analysis"
+    _run_example("analyze_foley.py", first_dir)
+    _run_example("analyze_foley.py", second_dir)
+    report = first_dir / "foley-analysis.txt"
+    repeated = second_dir / "foley-analysis.txt"
+    assert report.is_file()
+    assert report.read_bytes() == repeated.read_bytes()
+    content = report.read_text(encoding="utf-8")
+    for label in (
+        "wood-boots",
+        "wood-shoes",
+        "stone-shoes",
+        "stone-heels",
+        "carpet-barefoot",
+        "gravel-boots",
+    ):
+        assert label in content
+    for metric in (
+        "duration_s",
+        "peak",
+        "rms",
+        "centroid_hz",
+        "fraction_80_200_hz",
+        "early_rms",
+        "mid_rms",
+        "tail_rms",
+    ):
+        assert metric in content.splitlines()[0]
+    assert set(ROOT.glob("*.wav")) == root_wavs_before

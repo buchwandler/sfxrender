@@ -53,10 +53,7 @@ HTTP audio sources unchanged.
 - `phone.ring`
 - `door.open`
 
-Built-in footsteps and knocks use layered, deterministic procedural synthesis rather than bundled
-recordings: footsteps combine heel/body, surface response, and delayed sole contacts, while knocks
-combine physical contact, a panel/body response, inharmonic modes, and colored diffusion. Walking
-uses subtle seeded timing variation; repeated renders with the same URI remain reproducible.
+Built-in footsteps and knocks use deterministic, NumPy-only procedural synthesis rather than bundled recordings. Footsteps build a seeded multi-stage ground-reaction-force envelope; footwear-shaped broadband contact excites either stable wood/stone/carpet modes or GRF-driven stochastic gravel impacts. Low-level seeded friction and release texture preserve event variation without a pitched body oscillator. Knocks use the same broadband impact and damped modal-response primitives. Walking retains subtle seeded timing and side variation, so repeated renders with the same URI match exactly.
 
 Built-in renderers ignore unknown query parameters so callers can preserve forward-compatible URI fields; misspelled parameters are therefore not rejected.
 
@@ -77,10 +74,15 @@ Run the focused Foley comparison gallery with:
 python examples/foley_quality_gallery.py
 ```
 
-It writes six footsteps, four knocks, and a combined `foley-quality-showcase.wav` to
-`example-artifacts/`; the showcase leaves 550 ms between cases. Third-party recordings used
-for local listening or measurement belong under the gitignored `reference-audio/` directory.
-They are not fetched, committed, included in tests, or packaged.
+It writes six ordered footstep WAVs (`01-footsteps-wood-boots.wav` through `06-footsteps-gravel-boots.wav`), four knocks, a footstep-only `foley-footsteps-showcase.wav`, and a combined `foley-quality-showcase.wav` under `example-artifacts/`; both strips leave 550 ms between cases. Third-party recordings used for local listening or measurement belong under the gitignored `reference-audio/` directory. They are not fetched, bundled, packaged, or committed.
+
+Run the deterministic spectral/temporal analysis report with:
+
+```bash
+python examples/analyze_foley.py
+```
+
+It writes `foley-analysis.txt` under `example-artifacts/` (or accepts a custom output directory when called from Python).
 
 ## Examples
 
@@ -88,6 +90,7 @@ They are not fetched, committed, included in tests, or packaged.
 - [`examples/audiobook_scene.py`](examples/audiobook_scene.py) — a short composed arrival scene with footsteps, knocks, and a door opening.
 - [`examples/parameter_gallery.py`](examples/parameter_gallery.py) — same-seed comparisons of knock materials and walking surfaces.
 - [`examples/foley_quality_gallery.py`](examples/foley_quality_gallery.py) — fixed-seed Foley surface, footwear, and knock comparisons.
+- [`examples/analyze_foley.py`](examples/analyze_foley.py) — reproducible spectral and contact-stage metrics for the fixed footstep cases.
 
 Run the other examples after installation:
 
@@ -95,6 +98,7 @@ Run the other examples after installation:
 python examples/audiobook_scene.py
 python examples/parameter_gallery.py
 python examples/foley_quality_gallery.py
+python examples/analyze_foley.py
 ```
 
 ## Extension
