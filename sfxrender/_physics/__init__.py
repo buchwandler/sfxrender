@@ -10,7 +10,12 @@ from .geometry import (
 )
 from .materials import MATERIALS, MechanicalMaterial
 from .modes import Mode, ModeSet, decay_from_q, filter_audio_modes, q_from_decay
-from .physical_impacts import ImpactResponse, render_coupled_impact, render_force_response, render_physical_impact
+from .physical_impacts import (
+    ImpactResponse,
+    render_coupled_impact,
+    render_force_response,
+    render_physical_impact,
+)
 from .radiation import radiation_efficiency
 from .resonator import ModalResonatorBank, modal_response
 from .rng import RandomStream, component_rng, event_rng
@@ -23,6 +28,8 @@ from .thin_material import (
     generate_thin_material_preset,
     render_thin_material_source,
 )
+from .stochastic import StochasticEvent, sample_stochastic_events
+from .turbulence import render_turbulence_layer
 from .strikes import (
     StrikeEvent,
     StruckResonatorPreset,
@@ -64,5 +71,8 @@ __all__ = [
     "ThinMaterialPreset",
     "generate_thin_material_preset",
     "render_thin_material_source",
+    "StochasticEvent",
+    "sample_stochastic_events",
+    "render_turbulence_layer",
     "render_strike_train",
 ]

@@ -7,6 +7,7 @@ from sfxrender import SFXRenderer
 
 from sfxrender._printer import generate_printer_model
 from sfxrender._printer import render_printer_tray_close, render_printer_tray_open
+
 _PRINTER_URIS = (
     "sfx:printer.print?pages=2&speed=normal&seed=17",
     "sfx:printer.tray_open?speed=normal&paper_load=full&seed=17",
@@ -48,7 +49,6 @@ def _well_separated_activity_peaks(samples: np.ndarray, sample_rate: int) -> lis
         if all(abs(index - previous) >= minimum_gap for previous in selected):
             selected.append(index)
     return sorted(selected)
-
 
 
 def test_open_and_close_reuse_seeded_tray_model() -> None:
@@ -107,6 +107,7 @@ def test_printer_model_identity_is_stable_for_seed_and_sample_rate() -> None:
     assert first.chassis_modes != changed_seed.chassis_modes
     assert first.motor_nominal_hz != changed_seed.motor_nominal_hz
 
+
 def test_printer_effects_are_deterministic_and_seed_sensitive() -> None:
     renderer = SFXRenderer(sample_rate=16_000)
     for uri in _PRINTER_URIS:
@@ -160,9 +161,7 @@ def test_tray_speed_and_paper_load_change_the_expected_properties() -> None:
 def test_tray_close_speed_force_and_paper_load_are_audible() -> None:
     renderer = SFXRenderer(sample_rate=24_000)
     durations = [
-        renderer.render_uri(
-            f"sfx:printer.tray_close?speed={speed}&seed=42"
-        ).duration
+        renderer.render_uri(f"sfx:printer.tray_close?speed={speed}&seed=42").duration
         for speed in ("slow", "normal", "fast")
     ]
     assert durations[0] > durations[1] > durations[2]
@@ -170,9 +169,7 @@ def test_tray_close_speed_force_and_paper_load_are_audible() -> None:
     gentle = renderer.render_uri(
         "sfx:printer.tray_close?paper_load=empty&force=gentle&seed=42"
     ).samples
-    firm = renderer.render_uri(
-        "sfx:printer.tray_close?paper_load=empty&force=firm&seed=42"
-    ).samples
+    firm = renderer.render_uri("sfx:printer.tray_close?paper_load=empty&force=firm&seed=42").samples
     terminal_start = round(0.55 * renderer.sample_rate)
     assert _rms(firm[terminal_start:]) > _rms(gentle[terminal_start:]) * 1.10
 
@@ -182,9 +179,10 @@ def test_tray_close_speed_force_and_paper_load_are_audible() -> None:
     full = renderer.render_uri(
         "sfx:printer.tray_close?paper_load=full&force=normal&seed=42"
     ).samples
-    assert _band_energy(full, renderer.sample_rate, 900.0, 6_000.0) > _band_energy(
-        empty, renderer.sample_rate, 900.0, 6_000.0
-    ) * 1.10
+    assert (
+        _band_energy(full, renderer.sample_rate, 900.0, 6_000.0)
+        > _band_energy(empty, renderer.sample_rate, 900.0, 6_000.0) * 1.10
+    )
 
 
 def test_power_states_are_distinct_and_off_tail_decays() -> None:
@@ -203,7 +201,6 @@ def test_wake_is_shorter_and_lighter_than_restart() -> None:
     assert wake.duration < deep_wake.duration < restart.duration
     assert not np.array_equal(wake.samples, restart.samples)
     assert _rms(restart.samples) > 0.0
-
 
 
 @pytest.mark.parametrize("sample_rate", [8_000, 16_000, 24_000, 48_000])
@@ -231,6 +228,7 @@ def test_printer_confirmation_beep_is_optional_and_deterministic(sample_rate: in
         np.testing.assert_array_equal(first_on, repeated_on)
         assert first_on.shape == original.shape
         assert not np.array_equal(first_on, original)
+
 
 @pytest.mark.parametrize("sample_rate", [8_000, 16_000, 24_000, 48_000])
 def test_printer_effects_obey_pcm_contract_at_supported_rates(sample_rate: int) -> None:

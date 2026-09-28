@@ -41,9 +41,7 @@ def test_page_count_and_speed_change_turn_timing() -> None:
 
 def test_paper_handling_duration_and_intensity_are_semantic() -> None:
     renderer = SFXRenderer(sample_rate=24_000)
-    gentle = renderer.render_uri(
-        "sfx:paper.handle?duration=0.8&intensity=gentle&seed=42"
-    )
+    gentle = renderer.render_uri("sfx:paper.handle?duration=0.8&intensity=gentle&seed=42")
     rough = renderer.render_uri("sfx:paper.handle?duration=0.8&intensity=rough&seed=42")
     longer = renderer.render_uri("sfx:paper.handle?duration=1.6&intensity=gentle&seed=42")
     assert not np.array_equal(gentle.samples, rough.samples)

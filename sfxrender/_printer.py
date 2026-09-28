@@ -99,14 +99,21 @@ def generate_printer_model(*, seed: int, sample_rate: int) -> PrinterModel:
                 modal_mass_kg=0.06 + index * 0.025,
             )
             for index, (frequency, decay, gain) in enumerate(
-                ((240.0, 0.12, 0.36), (480.0, 0.09, 0.30), (860.0, 0.065, 0.24),
-                 (1_430.0, 0.045, 0.18), (2_250.0, 0.03, 0.11))
+                (
+                    (240.0, 0.12, 0.36),
+                    (480.0, 0.09, 0.30),
+                    (860.0, 0.065, 0.24),
+                    (1_430.0, 0.045, 0.18),
+                    (2_250.0, 0.03, 0.11),
+                )
             )
             if frequency < sample_rate * 0.44
         )
     )
 
-    def contact(component_id: int, mass: tuple[float, float], stiffness: tuple[float, float]) -> ImpactContact:
+    def contact(
+        component_id: int, mass: tuple[float, float], stiffness: tuple[float, float]
+    ) -> ImpactContact:
         rng = component_rng(seed, _PRINTER_SALT, component_id, sample_rate)
         return ImpactContact(
             effective_mass_kg=float(rng.uniform(*mass)),
@@ -570,9 +577,7 @@ def render_printer_tray_close(
         output_gain=20.0,
         tail_s=0.18,
     )
-    latch = _click(
-        sample_rate, seed, 8, strength=0.42, model=model, body="tray"
-    )
+    latch = _click(sample_rate, seed, 8, strength=0.42, model=model, body="tray")
     size = motion.position.size + round(0.19 * sample_rate)
     layers: list[tuple[FloatAudio, int]] = [
         (sliding, round(0.035 * sample_rate)),
@@ -680,7 +685,10 @@ def render_printer_restart(
     )
     if beep:
         layers.append(
-            (_printer_beep(sample_rate=sample_rate, seed=seed, event_index=31), size - round(0.12 * sample_rate))
+            (
+                _printer_beep(sample_rate=sample_rate, seed=seed, event_index=31),
+                size - round(0.12 * sample_rate),
+            )
         )
     return _mixed(size, layers)
 
@@ -742,6 +750,9 @@ def render_printer_wake(
         )
     if beep:
         layers.append(
-            (_printer_beep(sample_rate=sample_rate, seed=seed, event_index=32), size - round(0.12 * sample_rate))
+            (
+                _printer_beep(sample_rate=sample_rate, seed=seed, event_index=32),
+                size - round(0.12 * sample_rate),
+            )
         )
     return _mixed(size, layers)

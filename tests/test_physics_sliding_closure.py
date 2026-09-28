@@ -27,9 +27,7 @@ def test_sliding_source_is_deterministic_and_finite(sample_rate: int) -> None:
         harmonic_rolloff=(1.6, 2.2),
         chaos_amount=0.25,
     )
-    body = ModalBody(
-        modes=(SlidingMode(frequency_hz=420.0, decay_s=0.08, gain=0.3),)
-    )
+    body = ModalBody(modes=(SlidingMode(frequency_hz=420.0, decay_s=0.08, gain=0.3),))
     first = render_sliding_source(
         motion=motion,
         profile=profile,

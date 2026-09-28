@@ -23,6 +23,51 @@ from ._object_effects import (
     render_switch_toggle,
 )
 from ._paper import render_page_turn, render_paper_handle
+from ._device_effects import (
+    render_device_beep,
+    render_device_power_off,
+    render_device_power_on,
+    render_electronics_hum,
+    render_phone_notification,
+    render_phone_vibrate,
+)
+from ._ambience import (
+    render_city_ambience,
+    render_office_ambience,
+    render_room_tone,
+)
+from ._environment import (
+    render_birds_ambience,
+    render_crickets_ambience,
+    render_fire_crackle,
+    render_rain,
+    render_transition_whoosh,
+    render_wind,
+)
+from ._metal_effects import (
+    render_alarm_ring,
+    render_clock_tick,
+    render_keyboard_typing,
+    render_keys_jingle,
+)
+from ._material_effects import (
+    render_car_door,
+    render_chair_move,
+    render_cloth_rustle,
+    render_floor_creak,
+    render_lock_turn,
+)
+from ._transport_effects import (
+    render_car_engine,
+    render_car_passby,
+    render_elevator_arrive,
+)
+from ._fluid_effects import (
+    render_crowd_murmur,
+    render_thunder,
+    render_water_pour,
+    render_water_running,
+)
 from ._physics.contact import ImpactContact, impact_force
 from ._physics.geometry import rectangular_plate_modes
 from ._physics.physical_impacts import render_physical_impact
@@ -145,7 +190,7 @@ def _knock_hit(
         * object_preset.geometry.height_m
         * object_preset.geometry.thickness_m
     )
-    output_gain = 20.0 + 12.0 / max(body_mass, 0.2)
+    output_gain = 2.0 + 1.2 / max(body_mass, 0.2)
     hit = render_physical_impact(
         trace,
         modes,
@@ -212,9 +257,7 @@ def button_press(spec: SfxSpec, context: RenderContext) -> RenderedSound:
 
 
 def object_set_down(spec: SfxSpec, context: RenderContext) -> RenderedSound:
-    object_type = choice(
-        spec.parameters, "object", "wood", {"wood", "metal", "ceramic"}
-    )
+    object_type = choice(spec.parameters, "object", "wood", {"wood", "metal", "ceramic"})
     surface = choice(spec.parameters, "surface", "wood", {"wood", "stone"})
     force = choice(spec.parameters, "force", "normal", {"gentle", "normal", "firm"})
     seed = spec.seed if spec.seed is not None else 0
@@ -243,19 +286,13 @@ def paper_page_turn(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     pages = integer(spec.parameters, "pages", 1, minimum=1, maximum=6)
     speed = choice(spec.parameters, "speed", "normal", {"slow", "normal", "fast"})
     seed = spec.seed if spec.seed is not None else 0
-    samples = render_page_turn(
-        sample_rate=context.sample_rate, pages=pages, speed=speed, seed=seed
-    )
+    samples = render_page_turn(sample_rate=context.sample_rate, pages=pages, speed=speed, seed=seed)
     return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
 
 
 def paper_handle(spec: SfxSpec, context: RenderContext) -> RenderedSound:
-    duration = number(
-        spec.parameters, "duration", 1.2, minimum=0.3, maximum=4.0
-    )
-    intensity = choice(
-        spec.parameters, "intensity", "normal", {"gentle", "normal", "rough"}
-    )
+    duration = number(spec.parameters, "duration", 1.2, minimum=0.3, maximum=4.0)
+    intensity = choice(spec.parameters, "intensity", "normal", {"gentle", "normal", "rough"})
     seed = spec.seed if spec.seed is not None else 0
     samples = render_paper_handle(
         sample_rate=context.sample_rate,
@@ -265,6 +302,7 @@ def paper_handle(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     )
     return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
 
+
 def _footstep_hit(
     *,
     sample_rate: int,
@@ -273,9 +311,11 @@ def _footstep_hit(
     rng: np.random.Generator,
     force: float,
     side: float,
+    gait: str = "walk",
 ) -> FloatAudio:
-    """Route one event through its separate solid or aggregate surface model."""
-    local_force = force * (1.0 + 0.03 * side)
+    """Route one event through its gait-specific shared foot-ground model."""
+    side_variation = 0.09 if gait == "run" else 0.03
+    local_force = force * (1.0 + side_variation * side)
     if surface == "gravel":
         return aggregate_footstep(
             sample_rate=sample_rate,
@@ -283,6 +323,7 @@ def _footstep_hit(
             footwear=footwear,
             force=local_force,
             rng=rng,
+            gait=gait,
         )
     return solid_footstep(
         sample_rate=sample_rate,
@@ -290,29 +331,48 @@ def _footstep_hit(
         footwear=footwear,
         force=local_force,
         rng=rng,
+        gait=gait,
     )
 
 
-def footsteps(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+def _render_footstep_sequence(
+    spec: SfxSpec,
+    context: RenderContext,
+    *,
+    gait: str,
+    default_count: int,
+    default_force: float,
+    default_interval: float,
+    minimum_interval: float,
+    maximum_interval: float,
+    jitter_fraction: float,
+) -> RenderedSound:
     params = spec.parameters
-    surface = choice(params, "surface", "wood", {"wood", "stone", "gravel", "carpet"})
+    surface_values = (
+        {"wood", "stone"} if gait.startswith("stairs_") else {"wood", "stone", "gravel", "carpet"}
+    )
+    surface = choice(params, "surface", "wood", surface_values)
     footwear = choice(params, "footwear", "shoes", {"barefoot", "shoes", "boots", "heels"})
-    count = integer(params, "count", 4, minimum=1, maximum=64)
-    force = number(params, "force", 0.6, minimum=0.05, maximum=1.0)
-    interval = number(params, "interval", 0.52, minimum=0.18, maximum=2.0)
+    count = integer(params, "count", default_count, minimum=1, maximum=64)
+    force = number(params, "force", default_force, minimum=0.05, maximum=1.0)
+    interval = number(
+        params,
+        "interval",
+        default_interval,
+        minimum=minimum_interval,
+        maximum=maximum_interval,
+    )
     starts = _event_starts(
         count=count,
         interval=interval,
         sample_rate=context.sample_rate,
         spec=spec,
-        jitter_fraction=0.04,
+        jitter_fraction=jitter_fraction,
     )
-    duration = {"barefoot": 0.292, "shoes": 0.265, "boots": 0.305, "heels": 0.245}[footwear]
-    if surface == "gravel":
-        duration += 0.02
-    hit_size = max(1, round(duration * context.sample_rate))
-    result = np.zeros(starts[-1] + hit_size, dtype=np.float32)
-    for index, start in enumerate(starts):
+    gait_force = force * (1.18 if gait == "run" else 1.0)
+    hits: list[FloatAudio] = []
+    gains: list[float] = []
+    for index in range(count):
         rng = _rng(spec, index)
         side = -1.0 if index % 2 else 1.0
         hit = _footstep_hit(
@@ -320,13 +380,462 @@ def footsteps(spec: SfxSpec, context: RenderContext) -> RenderedSound:
             surface=surface,
             footwear=footwear,
             rng=rng,
-            force=force,
+            force=gait_force,
             side=side,
+            gait=gait,
         )
-        local_force = float(rng.uniform(0.95, 1.05)) * (1.0 + 0.025 * side)
-        _mix_at(result, hit * np.float32(local_force), start)
+        variation = 0.15 if gait == "run" else 0.08 if gait.startswith("stairs_") else 0.05
+        side_gain = 0.09 if gait == "run" else 0.06 if gait.startswith("stairs_") else 0.025
+        gains.append(
+            float(rng.uniform(1.0 - variation, 1.0 + variation)) * (1.0 + side_gain * side)
+        )
+        hits.append(hit)
+    if gait == "walk":
+        duration = {"barefoot": 0.292, "shoes": 0.265, "boots": 0.305, "heels": 0.245}[footwear]
+        if surface == "gravel":
+            duration += 0.02
+        output_size = starts[-1] + max(1, round(duration * context.sample_rate))
+    else:
+        output_size = max(start + hit.size for start, hit in zip(starts, hits, strict=True))
+    result = np.zeros(output_size, dtype=np.float32)
+    for start, hit, gain in zip(starts, hits, gains, strict=True):
+        _mix_at(result, hit * np.float32(gain), start)
     result = _fade_out(result, context.sample_rate, 0.025)
     return RenderedSound(_limit_peak(result), context.sample_rate, spec)
+
+
+def footsteps(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    return _render_footstep_sequence(
+        spec,
+        context,
+        gait="walk",
+        default_count=4,
+        default_force=0.6,
+        default_interval=0.52,
+        minimum_interval=0.18,
+        maximum_interval=2.0,
+        jitter_fraction=0.04,
+    )
+
+
+def footsteps_run(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    return _render_footstep_sequence(
+        spec,
+        context,
+        gait="run",
+        default_count=8,
+        default_force=0.68,
+        default_interval=0.32,
+        minimum_interval=0.20,
+        maximum_interval=0.8,
+        jitter_fraction=0.08,
+    )
+
+
+def footsteps_stairs(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    direction = choice(spec.parameters, "direction", "up", {"up", "down"})
+    interval = 0.58
+    return _render_footstep_sequence(
+        spec,
+        context,
+        gait=f"stairs_{direction}",
+        default_count=5,
+        default_force=0.62,
+        default_interval=interval,
+        minimum_interval=0.28,
+        maximum_interval=1.6,
+        jitter_fraction=0.05,
+    )
+
+
+def electronics_hum(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    source = choice(spec.parameters, "source", "transformer", {"transformer", "appliance"})
+    duration = number(spec.parameters, "duration", 2.0, minimum=0.5, maximum=8.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_electronics_hum(
+        sample_rate=context.sample_rate, duration=duration, device=source, seed=seed
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def device_beep(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    style = choice(spec.parameters, "style", "soft", {"soft", "alert"})
+    pattern = choice(spec.parameters, "pattern", "single", {"single", "double", "triple"})
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_device_beep(
+        sample_rate=context.sample_rate, style=style, pattern=pattern, seed=seed
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def phone_notification(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    style = choice(spec.parameters, "style", "gentle", {"gentle", "urgent"})
+    count = integer(spec.parameters, "count", 1, minimum=1, maximum=4)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_phone_notification(
+        sample_rate=context.sample_rate, style=style, count=count, seed=seed
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def phone_vibrate(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    duration = number(spec.parameters, "duration", 0.8, minimum=0.2, maximum=5.0)
+    intensity = choice(spec.parameters, "intensity", "normal", {"gentle", "normal", "strong"})
+    pattern = choice(spec.parameters, "pattern", "steady", {"steady", "pulsed"})
+    surface = choice(spec.parameters, "surface", "wood", {"wood", "stone"})
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_phone_vibrate(
+        sample_rate=context.sample_rate,
+        duration=duration,
+        intensity=intensity,
+        pattern=pattern,
+        surface=surface,
+        seed=seed,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def device_power_on(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    device = choice(spec.parameters, "device", "small", {"small", "appliance"})
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_device_power_on(sample_rate=context.sample_rate, device=device, seed=seed)
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def device_power_off(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    device = choice(spec.parameters, "device", "small", {"small", "appliance"})
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_device_power_off(sample_rate=context.sample_rate, device=device, seed=seed)
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def room_tone(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    character = choice(
+        spec.parameters,
+        "character",
+        "quiet",
+        {"quiet", "ventilated", "electrical"},
+    )
+    duration = number(spec.parameters, "duration", 4.0, minimum=0.5, maximum=30.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_room_tone(
+        sample_rate=context.sample_rate,
+        duration=duration,
+        character=character,
+        seed=seed,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def office_ambience(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    activity = choice(spec.parameters, "activity", "quiet", {"quiet", "busy"})
+    duration = number(spec.parameters, "duration", 8.0, minimum=2.0, maximum=30.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_office_ambience(
+        sample_rate=context.sample_rate,
+        duration=duration,
+        activity=activity,
+        seed=seed,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def city_ambience(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    activity = choice(spec.parameters, "activity", "calm", {"calm", "busy"})
+    duration = number(spec.parameters, "duration", 12.0, minimum=4.0, maximum=30.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_city_ambience(
+        sample_rate=context.sample_rate,
+        duration=duration,
+        activity=activity,
+        seed=seed,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def wind(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    intensity = choice(spec.parameters, "intensity", "light", {"light", "strong"})
+    texture = choice(spec.parameters, "texture", "smooth", {"smooth", "leafy"})
+    duration = number(spec.parameters, "duration", 6.0, minimum=1.0, maximum=30.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_wind(
+        sample_rate=context.sample_rate,
+        duration=duration,
+        intensity=intensity,
+        texture=texture,
+        seed=seed,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def transition_whoosh(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    style = choice(spec.parameters, "style", "soft", {"soft", "forceful"})
+    direction = choice(spec.parameters, "direction", "rise", {"rise", "fall"})
+    duration = number(spec.parameters, "duration", 1.2, minimum=0.25, maximum=4.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_transition_whoosh(
+        sample_rate=context.sample_rate,
+        duration=duration,
+        style=style,
+        direction=direction,
+        seed=seed,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def rain(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    intensity = choice(spec.parameters, "intensity", "steady", {"light", "steady", "heavy"})
+    surface = choice(spec.parameters, "surface", "ground", {"ground", "roof", "window"})
+    duration = number(spec.parameters, "duration", 8.0, minimum=1.0, maximum=30.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_rain(
+        sample_rate=context.sample_rate,
+        duration=duration,
+        intensity=intensity,
+        surface=surface,
+        seed=seed,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def fire_crackle(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    activity = choice(spec.parameters, "activity", "quiet", {"quiet", "active"})
+    duration = number(spec.parameters, "duration", 8.0, minimum=2.0, maximum=30.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_fire_crackle(
+        sample_rate=context.sample_rate,
+        duration=duration,
+        activity=activity,
+        seed=seed,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def birds_ambience(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    activity = choice(spec.parameters, "activity", "sparse", {"sparse", "busy"})
+    duration = number(spec.parameters, "duration", 12.0, minimum=2.0, maximum=30.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_birds_ambience(
+        sample_rate=context.sample_rate,
+        duration=duration,
+        activity=activity,
+        seed=seed,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def crickets_ambience(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    activity = choice(spec.parameters, "activity", "sparse", {"sparse", "busy"})
+    duration = number(spec.parameters, "duration", 12.0, minimum=2.0, maximum=30.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_crickets_ambience(
+        sample_rate=context.sample_rate,
+        duration=duration,
+        activity=activity,
+        seed=seed,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def keys_jingle(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    style = choice(spec.parameters, "style", "light", {"light", "full"})
+    duration = number(spec.parameters, "duration", 1.2, minimum=0.25, maximum=5.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_keys_jingle(
+        sample_rate=context.sample_rate, duration=duration, style=style, seed=seed
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def lock_turn(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    style = choice(spec.parameters, "style", "key", {"key", "deadbolt"})
+    force = choice(spec.parameters, "force", "light", {"light", "firm"})
+    duration = number(spec.parameters, "duration", 1.5, minimum=0.3, maximum=5.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_lock_turn(
+        sample_rate=context.sample_rate, duration=duration, style=style, force=force, seed=seed
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def chair_move(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    surface = choice(spec.parameters, "surface", "wood", {"wood", "stone", "carpet"})
+    effort = choice(spec.parameters, "effort", "light", {"light", "firm"})
+    action = choice(spec.parameters, "action", "slide", {"slide", "set_down"})
+    duration = number(spec.parameters, "duration", 2.0, minimum=0.5, maximum=8.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_chair_move(
+        sample_rate=context.sample_rate,
+        duration=duration,
+        surface=surface,
+        effort=effort,
+        action=action,
+        seed=seed,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def cloth_rustle(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    fabric = choice(spec.parameters, "fabric", "cotton", {"cotton", "silk", "nylon"})
+    activity = choice(spec.parameters, "activity", "light", {"light", "active"})
+    duration = number(spec.parameters, "duration", 4.0, minimum=0.5, maximum=12.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_cloth_rustle(
+        sample_rate=context.sample_rate,
+        duration=duration,
+        fabric=fabric,
+        activity_level=activity,
+        seed=seed,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def floor_creak(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    surface = choice(spec.parameters, "surface", "wood", {"wood", "carpet"})
+    weight = choice(spec.parameters, "weight", "light", {"light", "heavy"})
+    duration = number(spec.parameters, "duration", 1.3, minimum=0.4, maximum=4.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_floor_creak(
+        sample_rate=context.sample_rate,
+        duration=duration,
+        surface=surface,
+        weight=weight,
+        seed=seed,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def keyboard_typing(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    speed = choice(spec.parameters, "speed", "steady", {"slow", "steady", "fast"})
+    force = choice(spec.parameters, "force", "light", {"light", "firm"})
+    duration = number(spec.parameters, "duration", 6.0, minimum=1.0, maximum=30.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_keyboard_typing(
+        sample_rate=context.sample_rate, duration=duration, speed=speed, force=force, seed=seed
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def clock_tick(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    style = choice(spec.parameters, "style", "wall", {"wall", "mantel"})
+    rate = choice(spec.parameters, "rate", "normal", {"slow", "normal"})
+    duration = number(spec.parameters, "duration", 6.0, minimum=1.0, maximum=30.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_clock_tick(
+        sample_rate=context.sample_rate, duration=duration, style=style, rate=rate, seed=seed
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def alarm_ring(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    style = choice(spec.parameters, "style", "mechanical", {"mechanical", "electronic"})
+    pattern = choice(spec.parameters, "pattern", "intermittent", {"intermittent", "continuous"})
+    duration = number(spec.parameters, "duration", 5.0, minimum=1.0, maximum=15.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_alarm_ring(
+        sample_rate=context.sample_rate, duration=duration, style=style, pattern=pattern, seed=seed
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def elevator_arrive(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    size = choice(spec.parameters, "size", "small", {"small", "large"})
+    chime = choice(spec.parameters, "chime", "single", {"single", "double"})
+    duration = number(spec.parameters, "duration", 3.5, minimum=1.0, maximum=8.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_elevator_arrive(
+        sample_rate=context.sample_rate, duration=duration, size=size, chime=chime, seed=seed
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def water_pour(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    flow = choice(spec.parameters, "flow", "steady", {"trickle", "steady", "strong"})
+    vessel = choice(spec.parameters, "vessel", "glass", {"glass", "ceramic", "metal"})
+    duration = number(spec.parameters, "duration", 4.0, minimum=0.5, maximum=12.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_water_pour(
+        sample_rate=context.sample_rate, duration=duration, flow=flow, vessel=vessel, seed=seed
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def water_running(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    flow = choice(spec.parameters, "flow", "steady", {"gentle", "steady", "strong"})
+    duration = number(spec.parameters, "duration", 6.0, minimum=1.0, maximum=20.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_water_running(
+        sample_rate=context.sample_rate, duration=duration, flow=flow, seed=seed
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def crowd_murmur(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    density = choice(spec.parameters, "density", "moderate", {"sparse", "moderate", "busy"})
+    duration = number(spec.parameters, "duration", 8.0, minimum=2.0, maximum=30.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_crowd_murmur(
+        sample_rate=context.sample_rate, duration=duration, density=density, seed=seed
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def thunder(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    intensity = choice(spec.parameters, "intensity", "strong", {"light", "strong"})
+    distance = choice(spec.parameters, "distance", "distant", {"near", "distant"})
+    duration = number(spec.parameters, "duration", 6.0, minimum=3.0, maximum=15.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_thunder(
+        sample_rate=context.sample_rate,
+        duration=duration,
+        intensity=intensity,
+        distance=distance,
+        seed=seed,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def car_door(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    action = choice(spec.parameters, "action", "close", {"open", "close"})
+    size = choice(spec.parameters, "size", "sedan", {"sedan", "suv"})
+    force = choice(spec.parameters, "force", "firm", {"light", "firm"})
+    duration = number(spec.parameters, "duration", 1.5, minimum=0.5, maximum=4.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_car_door(
+        sample_rate=context.sample_rate,
+        duration=duration,
+        action=action,
+        size=size,
+        force=force,
+        seed=seed,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def car_engine(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    action = choice(spec.parameters, "action", "idle", {"start", "idle", "rev"})
+    vehicle = choice(spec.parameters, "vehicle", "compact", {"compact", "truck"})
+    duration = number(spec.parameters, "duration", 5.0, minimum=1.0, maximum=15.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_car_engine(
+        sample_rate=context.sample_rate,
+        duration=duration,
+        action=action,
+        vehicle=vehicle,
+        seed=seed,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def car_passby(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    speed = choice(spec.parameters, "speed", "slow", {"slow", "fast"})
+    vehicle = choice(spec.parameters, "vehicle", "compact", {"compact", "truck"})
+    duration = number(spec.parameters, "duration", 5.0, minimum=2.0, maximum=10.0)
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_car_passby(
+        sample_rate=context.sample_rate, duration=duration, speed=speed, vehicle=vehicle, seed=seed
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
 
 
 def phone_ring(spec: SfxSpec, context: RenderContext) -> RenderedSound:
@@ -353,7 +862,6 @@ def phone_ring(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     return RenderedSound(_limit_peak(result), context.sample_rate, spec)
 
 
-
 def doorbell_ring(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     params = spec.parameters
     style = choice(params, "style", "chime", {"chime", "electronic"})
@@ -363,9 +871,7 @@ def doorbell_ring(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     ring_duration = 0.72
     if style == "chime":
         model = generate_door_chime(seed=seed, sample_rate=context.sample_rate)
-        ring = render_door_chime(
-            model, duration_s=ring_duration, sample_rate=context.sample_rate
-        )
+        ring = render_door_chime(model, duration_s=ring_duration, sample_rate=context.sample_rate)
     else:
         ring = render_electronic_doorbell(
             seed=seed, duration_s=ring_duration, sample_rate=context.sample_rate
@@ -376,6 +882,7 @@ def doorbell_ring(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     for index in range(count):
         _mix_at(result, ring, index * spacing)
     return RenderedSound(_limit_peak(result), context.sample_rate, spec)
+
 
 def door_open(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     params = spec.parameters

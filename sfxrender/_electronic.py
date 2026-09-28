@@ -86,7 +86,9 @@ def render_tone_pattern(
     for pulse in pulses:
         if not isinstance(pulse, TonePulse):
             raise TypeError("pulses must contain TonePulse values")
-        pulse_size = min(round(pulse.duration_s * sample_rate), size - round(pulse.start_s * sample_rate))
+        pulse_size = min(
+            round(pulse.duration_s * sample_rate), size - round(pulse.start_s * sample_rate)
+        )
         if pulse_size <= 0:
             continue
         start = round(pulse.start_s * sample_rate)

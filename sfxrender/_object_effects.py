@@ -72,8 +72,7 @@ def _impact(
         sample_rate=sample_rate,
     )
     responses = tuple(
-        ImpactResponse(mode_set, gain=gain, microscopic_gain=0.10)
-        for mode_set, gain in modes
+        ImpactResponse(mode_set, gain=gain, microscopic_gain=0.10) for mode_set, gain in modes
     )
     rngs = tuple(
         component_rng(seed, _OBJECT_NAMESPACE, 80 + index, event_index)
@@ -132,9 +131,7 @@ def render_switch_toggle(*, sample_rate: int, state: str, seed: int) -> FloatAud
     return _sequence(((first, 0), (release, round(0.075 * sample_rate))))
 
 
-def render_button_press(
-    *, sample_rate: int, size: str, force: str, seed: int
-) -> FloatAudio:
+def render_button_press(*, sample_rate: int, size: str, force: str, seed: int) -> FloatAudio:
     button_specs = {
         "small": ((760.0, 0.035, 0.40), (1_650.0, 0.025, 0.28), (2_850.0, 0.018, 0.14)),
         "large": ((390.0, 0.060, 0.45), (920.0, 0.045, 0.30), (1_800.0, 0.032, 0.18)),
@@ -184,7 +181,9 @@ def _plate_modes(
     component_id: int,
     max_modes: int,
 ) -> ModeSet:
-    preset = OBJECT_PRESETS[preset_name] if preset_name in OBJECT_PRESETS else FLOOR_OBJECTS[preset_name]
+    preset = (
+        OBJECT_PRESETS[preset_name] if preset_name in OBJECT_PRESETS else FLOOR_OBJECTS[preset_name]
+    )
     rng = component_rng(seed, _OBJECT_NAMESPACE, component_id, sample_rate)
     return rectangular_plate_modes(
         preset.geometry,
@@ -243,11 +242,26 @@ def render_glass_clink(
     *, sample_rate: int, style: str, count: int, force: str, seed: int
 ) -> FloatAudio:
     glass_specs = {
-        "wine": ((430.0, 0.42, 0.72), (860.0, 0.34, 0.48), (1_420.0, 0.25, 0.30), (2_250.0, 0.19, 0.18), (3_250.0, 0.14, 0.10)),
-        "tumbler": ((560.0, 0.28, 0.72), (1_120.0, 0.23, 0.48), (1_740.0, 0.18, 0.30), (2_480.0, 0.14, 0.18), (3_400.0, 0.11, 0.10)),
+        "wine": (
+            (430.0, 0.42, 0.72),
+            (860.0, 0.34, 0.48),
+            (1_420.0, 0.25, 0.30),
+            (2_250.0, 0.19, 0.18),
+            (3_250.0, 0.14, 0.10),
+        ),
+        "tumbler": (
+            (560.0, 0.28, 0.72),
+            (1_120.0, 0.23, 0.48),
+            (1_740.0, 0.18, 0.30),
+            (2_480.0, 0.14, 0.18),
+            (3_400.0, 0.11, 0.10),
+        ),
     }
     first = _modes(seed, sample_rate, 30, glass_specs[style])
-    second_specs = tuple((frequency * 1.035, decay * 0.92, gain * 0.82) for frequency, decay, gain in glass_specs[style])
+    second_specs = tuple(
+        (frequency * 1.035, decay * 0.92, gain * 0.82)
+        for frequency, decay, gain in glass_specs[style]
+    )
     second = _modes(seed, sample_rate, 31, second_specs)
     contact = _contact(
         seed,

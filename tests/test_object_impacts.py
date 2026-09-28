@@ -33,7 +33,6 @@ def test_object_effects_obey_seeded_pcm_contract(sample_rate: int, uri: str) -> 
     assert float(np.sqrt(np.mean(np.square(first.samples.astype(np.float64))))) > 1e-5
 
 
-
 def test_set_down_force_scales_one_coupled_contact() -> None:
     gentle = render_object_set_down(
         sample_rate=24_000,
@@ -52,6 +51,7 @@ def test_set_down_force_scales_one_coupled_contact() -> None:
     gentle_rms = float(np.sqrt(np.mean(np.square(gentle.astype(np.float64)))))
     firm_rms = float(np.sqrt(np.mean(np.square(firm.astype(np.float64)))))
     assert firm_rms > gentle_rms * 1.5
+
 
 def test_semantic_object_parameters_change_coupled_responses() -> None:
     renderer = SFXRenderer(sample_rate=24_000)

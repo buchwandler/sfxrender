@@ -29,7 +29,7 @@ from ._physics.friction import (
     make_roughness_profile,
     roughness_velocity,
 )
-from ._physics.geometry import rectangular_plate_modes
+from ._physics.geometry import BoundaryCondition, RectangularPlate, rectangular_plate_modes
 from ._physics.modes import ModeSet
 from ._physics.physical_impacts import render_physical_impact
 from ._physics.presets import FLOOR_OBJECTS, FOOTWEAR_CONTACTS, FootwearContactPreset
@@ -43,6 +43,7 @@ def _synthetic_grf(
     footwear: str,
     force: float,
     rng: np.random.Generator,
+    gait: str = "walk",
 ) -> FloatAudio:
     """Return a seeded heel/load/toe ground-reaction-force control envelope."""
     profile = FOOTWEAR_PROFILES[footwear]
@@ -50,6 +51,18 @@ def _synthetic_grf(
     sole_duration = float(rng.uniform(*profile.sole_duration_s))
     toe_delay = float(rng.uniform(*profile.toe_delay_s))
     toe_duration = float(rng.uniform(*profile.toe_duration_s))
+    if gait == "run":
+        sole_delay *= 0.78
+        sole_duration *= 0.82
+        toe_delay *= 0.76
+        toe_duration *= 0.82
+    elif gait == "stairs_up":
+        sole_delay *= 0.92
+        toe_delay *= 0.78
+        toe_duration *= 0.90
+    elif gait == "stairs_down":
+        sole_delay *= 0.90
+        toe_delay *= 1.10
     size_seconds = max(0.22, toe_delay + toe_duration + 0.032)
     size = max(1, round(size_seconds * sample_rate))
 
@@ -60,6 +73,15 @@ def _synthetic_grf(
     heel_amplitude = peak_load * (0.30 + 0.20 * profile.heel_hardness)
     sole_amplitude = peak_load * (0.52 + 0.24 * profile.low_weight_gain)
     toe_amplitude = peak_load * (0.16 + 0.12 * profile.toe_gain)
+    if gait == "run":
+        heel_amplitude *= 1.08
+        sole_amplitude *= 1.05
+    elif gait == "stairs_up":
+        heel_amplitude *= 0.72
+        toe_amplitude *= 1.30
+    elif gait == "stairs_down":
+        heel_amplitude *= 1.30
+        toe_amplitude *= 0.74
 
     heel = asymmetric_pulse(
         size,
@@ -121,6 +143,38 @@ def _floor_modes(
     )
 
 
+@lru_cache(maxsize=64)
+def _stair_modes(
+    surface_name: str,
+    sample_rate: int,
+    contact_x: float,
+    contact_y: float,
+) -> ModeSet:
+    """Build a smaller tread response from the selected stair material."""
+    floor = FLOOR_OBJECTS[surface_name]
+    thickness = 0.032 if surface_name == "wood" else 0.045
+    tread = RectangularPlate(1.0, 0.28, thickness, BoundaryCondition.FLOOR_SUPPORTED)
+    base = rectangular_plate_modes(
+        tread,
+        floor.material,
+        sample_rate=sample_rate,
+        max_modes=40,
+        contact_x=contact_x,
+        contact_y=contact_y,
+    )
+    return ModeSet(
+        tuple(
+            replace(
+                mode,
+                decay_s=mode.decay_s * floor.mode_decay_scale,
+                input_gain=mode.input_gain * floor.modal_gain,
+                modal_mass_kg=mode.modal_mass_kg * floor.modal_mass_scale,
+            )
+            for mode in base.modes
+        )
+    )
+
+
 def _floor_contact_audio(
     *,
     grf: FloatAudio,
@@ -129,19 +183,37 @@ def _floor_contact_audio(
     footwear_contact: FootwearContactPreset,
     rng: np.random.Generator,
     sample_rate: int,
+    gait: str = "walk",
 ) -> tuple[FloatAudio, ModeSet]:
     size = grf.size
     floor = FLOOR_OBJECTS[surface]
-    contacts = (
-        (0.0, 0.042, 1.0),
-        (0.032, 0.135, 0.76),
-        (0.105, 0.225, 0.54),
-    )
-    mode_sets = (
-        _floor_modes(surface, sample_rate, 0.20, 0.40),
-        _floor_modes(surface, sample_rate, 0.62, 0.56),
-        _floor_modes(surface, sample_rate, 0.82, 0.68),
-    )
+    if gait == "stairs_up":
+        contacts = ((0.0, 0.042, 0.72), (0.028, 0.135, 0.94), (0.092, 0.225, 1.28))
+    elif gait == "stairs_down":
+        contacts = ((0.0, 0.042, 1.28), (0.032, 0.135, 0.96), (0.105, 0.225, 0.72))
+    elif gait == "run":
+        contacts = tuple(
+            (start * 0.82, end * 0.82, gain)
+            for start, end, gain in ((0.0, 0.042, 1.0), (0.032, 0.135, 0.76), (0.105, 0.225, 0.54))
+        )
+    else:
+        contacts = (
+            (0.0, 0.042, 1.0),
+            (0.032, 0.135, 0.76),
+            (0.105, 0.225, 0.54),
+        )
+    if gait.startswith("stairs_"):
+        mode_sets = (
+            _stair_modes(surface, sample_rate, 0.20, 0.40),
+            _stair_modes(surface, sample_rate, 0.62, 0.56),
+            _stair_modes(surface, sample_rate, 0.82, 0.68),
+        )
+    else:
+        mode_sets = (
+            _floor_modes(surface, sample_rate, 0.20, 0.40),
+            _floor_modes(surface, sample_rate, 0.62, 0.56),
+            _floor_modes(surface, sample_rate, 0.82, 0.68),
+        )
     max_decay = max(
         (mode.decay_s for mode_set in mode_sets for mode in mode_set.modes),
         default=0.04,
@@ -204,6 +276,7 @@ def _mechanical_friction_audio(
     modes: ModeSet,
     rng: np.random.Generator,
     sample_rate: int,
+    gait: str = "walk",
 ) -> FloatAudio:
     if grf.size == 0:
         return np.zeros(0, dtype=np.float32)
@@ -211,6 +284,8 @@ def _mechanical_friction_audio(
     time = np.arange(grf.size, dtype=np.float32) / np.float32(sample_rate)
     release_gate = np.clip((time - np.float32(0.055)) / np.float32(0.035), 0.0, 1.0)
     slip_velocity = release_gate * (np.float32(0.035) + np.float32(0.18) * grf)
+    if gait == "run":
+        slip_velocity *= np.float32(1.22)
     normal_load = grf * np.float32(620.0)
     friction_scale = 0.48 + 0.52 * footwear.friction_gain
     mu_static = (
@@ -287,6 +362,7 @@ def _solid_footstep(
     footwear_contact: FootwearContactPreset,
     rng: np.random.Generator,
     sample_rate: int,
+    gait: str = "walk",
 ) -> FloatAudio:
     """Render GRF-timed compliant contacts, floor modes, and loaded slip friction."""
     profile = SOLID_SURFACE_PROFILES[surface]
@@ -300,6 +376,7 @@ def _solid_footstep(
         footwear_contact=footwear_contact,
         rng=rng,
         sample_rate=sample_rate,
+        gait=gait,
     )
     low_noise = bandpass_noise(rng, size, sample_rate, 42.0, 850.0)
     mid_noise = bandpass_noise(
@@ -348,23 +425,31 @@ def _solid_footstep(
         modes=floor_modes,
         rng=rng,
         sample_rate=sample_rate,
+        gait=gait,
     )
-    toe_start = int(rng.uniform(0.105, min(0.17, max(0.106, time[-1] - 0.015))) * sample_rate)
-    toe_size = max(1, size - toe_start)
-    scuff_noise = bandpass_noise(
-        rng,
-        toe_size,
-        sample_rate,
-        450.0,
-        min(5_000.0, sample_rate * 0.45),
-    )
-    scuff_env = np.exp(
-        -np.arange(toe_size, dtype=np.float32)
-        / np.float32(max(0.018, footwear.toe_duration_s[1] * 0.55) * sample_rate)
-    )
-    friction[toe_start:] += (
-        scuff_noise * scuff_env * np.float32(0.035 * footwear.toe_gain * profile.friction_roughness)
-    )
+    if gait != "run" or rng.random() < 0.68:
+        toe_scale = 0.82 if gait == "run" else 1.0
+        toe_start = int(
+            rng.uniform(0.105, min(0.17, max(0.106, time[-1] - 0.015))) * toe_scale * sample_rate
+        )
+        toe_size = max(1, size - toe_start)
+        scuff_noise = bandpass_noise(
+            rng,
+            toe_size,
+            sample_rate,
+            450.0,
+            min(5_000.0, sample_rate * 0.45),
+        )
+        scuff_env = np.exp(
+            -np.arange(toe_size, dtype=np.float32)
+            / np.float32(max(0.018, footwear.toe_duration_s[1] * 0.55) * sample_rate)
+        )
+        scuff_gain = 0.058 if gait == "run" else 0.035
+        friction[toe_start:] += (
+            scuff_noise
+            * scuff_env
+            * np.float32(scuff_gain * footwear.toe_gain * profile.friction_roughness)
+        )
     output[:size] += friction
     if surface == "wood":
         output = one_pole_lowpass(output, sample_rate, 900.0)
@@ -380,6 +465,7 @@ def solid_footstep(
     footwear: str,
     force: float,
     rng: np.random.Generator,
+    gait: str = "walk",
 ) -> FloatAudio:
     """Synthesize one GRF-driven solid-surface step."""
     profile = FOOTWEAR_PROFILES[footwear]
@@ -388,6 +474,7 @@ def solid_footstep(
         footwear=footwear,
         force=force,
         rng=rng,
+        gait=gait,
     )
     return _solid_footstep(
         grf=grf,
@@ -396,6 +483,7 @@ def solid_footstep(
         footwear_contact=FOOTWEAR_CONTACTS[footwear],
         rng=rng,
         sample_rate=sample_rate,
+        gait=gait,
     )
 
 
@@ -475,6 +563,7 @@ def _aggregate_footstep(
     footwear_contact: FootwearContactPreset,
     rng: np.random.Generator,
     sample_rate: int,
+    gait: str = "walk",
 ) -> FloatAudio:
     """Render load-bounded granular contacts over a physical hard-floor response."""
     if grf.size == 0:
@@ -487,6 +576,7 @@ def _aggregate_footstep(
         footwear_contact=footwear_contact,
         rng=rng,
         sample_rate=sample_rate,
+        gait=gait,
     )
     output = np.zeros(max(body.size, grf.size + particle_tail), dtype=np.float32)
     output[: body.size] += body
@@ -529,6 +619,7 @@ def _aggregate_footstep(
         modes=floor_modes,
         rng=rng,
         sample_rate=sample_rate,
+        gait=gait,
     )
     output[: grf.size] += friction
     return output
@@ -541,6 +632,7 @@ def aggregate_footstep(
     footwear: str,
     force: float,
     rng: np.random.Generator,
+    gait: str = "walk",
 ) -> FloatAudio:
     """Synthesize one seeded GRF-driven aggregate-surface step."""
     profile = FOOTWEAR_PROFILES[footwear]
@@ -549,6 +641,7 @@ def aggregate_footstep(
         footwear=footwear,
         force=force,
         rng=rng,
+        gait=gait,
     )
     return _aggregate_footstep(
         grf=grf,
@@ -557,4 +650,5 @@ def aggregate_footstep(
         footwear_contact=FOOTWEAR_CONTACTS[footwear],
         rng=rng,
         sample_rate=sample_rate,
+        gait=gait,
     )

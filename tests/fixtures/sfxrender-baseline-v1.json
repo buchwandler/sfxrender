@@ -36,10 +36,7 @@
           "default": "wood",
           "description": "Door construction family.",
           "type": "enum",
-          "values": [
-            "wood",
-            "metal"
-          ]
+          "values": ["wood", "metal"]
         },
         "seed": {
           "description": "Optional non-negative deterministic variation seed that identifies the generated door. Reuse the same material and seed for its matching open sound.",
@@ -50,11 +47,7 @@
           "default": "normal",
           "description": "Closing motion speed.",
           "type": "enum",
-          "values": [
-            "slow",
-            "normal",
-            "fast"
-          ]
+          "values": ["slow", "normal", "fast"]
         }
       }
     },
@@ -94,10 +87,7 @@
           "default": "wood",
           "description": "Door construction family.",
           "type": "enum",
-          "values": [
-            "wood",
-            "metal"
-          ]
+          "values": ["wood", "metal"]
         },
         "seed": {
           "description": "Optional non-negative deterministic variation seed that identifies the generated door. Reuse the same material and seed for its matching close sound.",
@@ -108,11 +98,7 @@
           "default": "normal",
           "description": "Opening motion speed.",
           "type": "enum",
-          "values": [
-            "slow",
-            "normal",
-            "fast"
-          ]
+          "values": ["slow", "normal", "fast"]
         }
       }
     },
@@ -146,12 +132,7 @@
           "default": "shoes",
           "description": "Footwear making contact with the walking surface.",
           "type": "enum",
-          "values": [
-            "barefoot",
-            "shoes",
-            "boots",
-            "heels"
-          ]
+          "values": ["barefoot", "shoes", "boots", "heels"]
         },
         "force": {
           "default": 0.6,
@@ -176,12 +157,7 @@
           "default": "wood",
           "description": "Floor or ground material being walked on.",
           "type": "enum",
-          "values": [
-            "wood",
-            "stone",
-            "gravel",
-            "carpet"
-          ]
+          "values": ["wood", "stone", "gravel", "carpet"]
         }
       }
     },
@@ -222,12 +198,7 @@
           "default": "knuckle",
           "description": "Object or body part making contact with the surface.",
           "type": "enum",
-          "values": [
-            "fingertip",
-            "knuckle",
-            "wooden_object",
-            "metal_object"
-          ]
+          "values": ["fingertip", "knuckle", "wooden_object", "metal_object"]
         },
         "interval": {
           "default": 0.22,
@@ -240,12 +211,7 @@
           "default": "wood",
           "description": "Resonant surface being struck.",
           "type": "enum",
-          "values": [
-            "wood",
-            "oak",
-            "metal",
-            "wall"
-          ]
+          "values": ["wood", "oak", "metal", "wall"]
         },
         "seed": {
           "description": "Optional non-negative deterministic variation seed. Reuse the same seed when reproducible output is required.",
@@ -296,11 +262,7 @@
           "default": "normal",
           "description": "Handwriting stroke speed and cadence.",
           "type": "enum",
-          "values": [
-            "slow",
-            "normal",
-            "fast"
-          ]
+          "values": ["slow", "normal", "fast"]
         }
       }
     },
@@ -345,10 +307,7 @@
           "default": "classic",
           "description": "Ring character: classic mechanical-style or electronic.",
           "type": "enum",
-          "values": [
-            "classic",
-            "electronic"
-          ]
+          "values": ["classic", "electronic"]
         }
       }
     },
@@ -379,10 +338,7 @@
           "default": "off",
           "description": "Whether the audible power action switches the printer off or on.",
           "type": "enum",
-          "values": [
-            "off",
-            "on"
-          ]
+          "values": ["off", "on"]
         }
       }
     },
@@ -421,11 +377,7 @@
           "default": "normal",
           "description": "Mechanical page-feed speed.",
           "type": "enum",
-          "values": [
-            "slow",
-            "normal",
-            "fast"
-          ]
+          "values": ["slow", "normal", "fast"]
         }
       }
     },
@@ -456,11 +408,7 @@
           "default": "normal",
           "description": "Duration and speed of the startup calibration sequence.",
           "type": "enum",
-          "values": [
-            "slow",
-            "normal",
-            "fast"
-          ]
+          "values": ["slow", "normal", "fast"]
         }
       }
     },
@@ -486,11 +434,7 @@
           "default": "full",
           "description": "Approximate amount of paper in the tray; controls loose paper movement.",
           "type": "enum",
-          "values": [
-            "empty",
-            "partial",
-            "full"
-          ]
+          "values": ["empty", "partial", "full"]
         },
         "seed": {
           "description": "Optional non-negative deterministic variation seed. Reuse the same seed when reproducible output is required.",
@@ -501,11 +445,7 @@
           "default": "normal",
           "description": "Speed at which the printer tray slides open.",
           "type": "enum",
-          "values": [
-            "slow",
-            "normal",
-            "fast"
-          ]
+          "values": ["slow", "normal", "fast"]
         }
       }
     },
@@ -532,10 +472,7 @@
           "default": "light",
           "description": "Wake response depth; deep has more mechanical activity.",
           "type": "enum",
-          "values": [
-            "light",
-            "deep"
-          ]
+          "values": ["light", "deep"]
         },
         "seed": {
           "description": "Optional non-negative deterministic variation seed. Reuse the same seed when reproducible output is required.",
@@ -608,7 +545,7 @@
         ],
         "duration_s": 0.6708333333333333,
         "envelope_peak_rms": 0.12570835459406213,
-        "envelope_rms_p10": 6.133743800036483e-06,
+        "envelope_rms_p10": 6.133743800036483e-6,
         "envelope_rms_p90": 0.0024437519261351036,
         "event_density_hz": 2.9813664596273295,
         "onset_time_s": 0.0,
@@ -617,11 +554,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 6392.486836206885,
         "spectral_centroid_trajectory_hz": [
-          816.8748959020413,
-          136.18235807570764,
-          6268.625756528607,
-          134.62873765456985,
-          131.72292132010324
+          816.8748959020413, 136.18235807570764, 6268.625756528607,
+          134.62873765456985, 131.72292132010324
         ],
         "spectral_flux": 0.11858725618781886,
         "spectral_rolloff_85_hz": 10148.57142857143,
@@ -694,7 +628,7 @@
         ],
         "duration_s": 1.5592916666666667,
         "envelope_peak_rms": 0.2648522454059293,
-        "envelope_rms_p10": 3.1785762497785724e-05,
+        "envelope_rms_p10": 3.1785762497785724e-5,
         "envelope_rms_p90": 0.003571078534727248,
         "event_density_hz": 0.641316837239131,
         "onset_time_s": 0.0,
@@ -703,11 +637,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 6095.4819395088525,
         "spectral_centroid_trajectory_hz": [
-          168.6802622242342,
-          135.54345760457292,
-          157.7198195973013,
-          131.9572968688771,
-          100.67715561968255
+          168.6802622242342, 135.54345760457292, 157.7198195973013,
+          131.9572968688771, 100.67715561968255
         ],
         "spectral_flux": 0.05196263837537689,
         "spectral_rolloff_85_hz": 10545.172754723031,
@@ -780,7 +711,7 @@
         ],
         "duration_s": 2.8746666666666667,
         "envelope_peak_rms": 0.09091903547546167,
-        "envelope_rms_p10": 2.8840603318374905e-06,
+        "envelope_rms_p10": 2.8840603318374905e-6,
         "envelope_rms_p90": 0.04221225055720364,
         "event_density_hz": 6.261595547309833,
         "onset_time_s": 0.0,
@@ -789,11 +720,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 830.5423606479662,
         "spectral_centroid_trajectory_hz": [
-          830.9418104117583,
-          67.42221319542342,
-          684.4487285214869,
-          60.39181227736005,
-          963.9838306171041
+          830.9418104117583, 67.42221319542342, 684.4487285214869,
+          60.39181227736005, 963.9838306171041
         ],
         "spectral_flux": 0.20772408629801972,
         "spectral_rolloff_85_hz": 1313.543599257885,
@@ -866,7 +794,7 @@
         ],
         "duration_s": 2.7665,
         "envelope_peak_rms": 0.06422438709699996,
-        "envelope_rms_p10": 3.5322842374745277e-06,
+        "envelope_rms_p10": 3.5322842374745277e-6,
         "envelope_rms_p90": 0.019995754394789393,
         "event_density_hz": 5.422013374299656,
         "onset_time_s": 0.0,
@@ -875,11 +803,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 2838.0962200138024,
         "spectral_centroid_trajectory_hz": [
-          3490.7028200868604,
-          276.36315713784137,
-          1293.7404312576691,
-          276.6516648778968,
-          2581.173259236582
+          3490.7028200868604, 276.36315713784137, 1293.7404312576691,
+          276.6516648778968, 2581.173259236582
         ],
         "spectral_flux": 0.13700327489573144,
         "spectral_rolloff_85_hz": 6336.887764323153,
@@ -895,10 +820,10 @@
         "active_duration_s": 1.817,
         "attack_duration_s": 0.108,
         "band_energy_fraction": {
-          "0_250_hz": 1.2677357375193295e-06,
-          "1k_5k_hz": 4.492668241909341e-08,
+          "0_250_hz": 1.2677357375193295e-6,
+          "1k_5k_hz": 4.492668241909341e-8,
           "250_1000_hz": 0.9999986861261526,
-          "5k_12k_hz": 1.2113826805424238e-09
+          "5k_12k_hz": 1.2113826805424238e-9
         },
         "dominant_peaks": [
           {
@@ -943,10 +868,7 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 449.08370968399515,
         "spectral_centroid_trajectory_hz": [
-          448.5533099565164,
-          448.9343840229491,
-          449.03899877385385,
-          0.0,
+          448.5533099565164, 448.9343840229491, 449.03899877385385, 0.0,
           449.09176175596224
         ],
         "spectral_flux": 0.04745923691975917,
@@ -1029,10 +951,7 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 955.3444475796526,
         "spectral_centroid_trajectory_hz": [
-          957.5024368294987,
-          954.5419916399273,
-          0.0,
-          953.71096102573,
+          957.5024368294987, 954.5419916399273, 0.0, 953.71096102573,
           964.0086118128024
         ],
         "spectral_flux": 0.1387274554837012,
@@ -1052,7 +971,7 @@
           "0_250_hz": 0.0857145664549002,
           "1k_5k_hz": 0.01539570152548555,
           "250_1000_hz": 0.8988890093648331,
-          "5k_12k_hz": 7.226547592851155e-07
+          "5k_12k_hz": 7.226547592851155e-7
         },
         "dominant_peaks": [
           {
@@ -1106,7 +1025,7 @@
         ],
         "duration_s": 2.49,
         "envelope_peak_rms": 0.1184351598796792,
-        "envelope_rms_p10": 6.474831522655395e-06,
+        "envelope_rms_p10": 6.474831522655395e-6,
         "envelope_rms_p90": 0.006690975865626836,
         "event_density_hz": 0.4016064257028112,
         "onset_time_s": 0.0,
@@ -1115,11 +1034,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 441.96589254918854,
         "spectral_centroid_trajectory_hz": [
-          795.6329093060185,
-          425.71889047807645,
-          429.3130984466077,
-          452.56051879362093,
-          198.5531501222676
+          795.6329093060185, 425.71889047807645, 429.3130984466077,
+          452.56051879362093, 198.5531501222676
         ],
         "spectral_flux": 0.14371655837099787,
         "spectral_rolloff_85_hz": 522.0883534136547,
@@ -1135,7 +1051,7 @@
         "active_duration_s": 0.5640000000000001,
         "attack_duration_s": 0.0,
         "band_energy_fraction": {
-          "0_250_hz": 2.1119270287293858e-05,
+          "0_250_hz": 2.1119270287293858e-5,
           "1k_5k_hz": 0.20602153106023405,
           "250_1000_hz": 0.7894619459507985,
           "5k_12k_hz": 0.004495232782282265
@@ -1192,7 +1108,7 @@
         ],
         "duration_s": 1.68,
         "envelope_peak_rms": 0.7551896686533726,
-        "envelope_rms_p10": 5.527824156276833e-06,
+        "envelope_rms_p10": 5.527824156276833e-6,
         "envelope_rms_p90": 0.08436497682494552,
         "event_density_hz": 0.5952380952380952,
         "onset_time_s": 0.0,
@@ -1201,11 +1117,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 886.247323322195,
         "spectral_centroid_trajectory_hz": [
-          6945.766069528834,
-          1061.7370514945987,
-          824.2268573547171,
-          709.2368628889229,
-          470.9477448624548
+          6945.766069528834, 1061.7370514945987, 824.2268573547171,
+          709.2368628889229, 470.9477448624548
         ],
         "spectral_flux": 0.07058454860884077,
         "spectral_rolloff_85_hz": 1353.5714285714287,
@@ -1278,7 +1191,7 @@
         ],
         "duration_s": 0.7814583333333334,
         "envelope_peak_rms": 0.10269995553315925,
-        "envelope_rms_p10": 1.1545379376695242e-05,
+        "envelope_rms_p10": 1.1545379376695242e-5,
         "envelope_rms_p90": 0.00992609782973522,
         "event_density_hz": 1.2796587576646228,
         "onset_time_s": 0.109,
@@ -1287,11 +1200,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 1142.445592947102,
         "spectral_centroid_trajectory_hz": [
-          463.54666268121747,
-          472.5321631103201,
-          450.548939546841,
-          476.51281977322,
-          129.94309604899402
+          463.54666268121747, 472.5321631103201, 450.548939546841,
+          476.51281977322, 129.94309604899402
         ],
         "spectral_flux": 0.15132113018212434,
         "spectral_rolloff_85_hz": 2033.3777659290859,
@@ -1373,11 +1283,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 4736.112599470003,
         "spectral_centroid_trajectory_hz": [
-          458.4962422040163,
-          3977.2129096927565,
-          4891.4889535403945,
-          4947.682070733338,
-          1726.436212730769
+          458.4962422040163, 3977.2129096927565, 4891.4889535403945,
+          4947.682070733338, 1726.436212730769
         ],
         "spectral_flux": 0.17720323115280007,
         "spectral_rolloff_85_hz": 8992.307692307691,
@@ -1459,11 +1366,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 4022.0716387048446,
         "spectral_centroid_trajectory_hz": [
-          770.1717547413274,
-          2966.948664903253,
-          3635.382472410418,
-          4113.620797668829,
-          0.0
+          770.1717547413274, 2966.948664903253, 3635.382472410418,
+          4113.620797668829, 0.0
         ],
         "spectral_flux": 0.16630353090197306,
         "spectral_rolloff_85_hz": 8327.027027027027,
@@ -1545,11 +1449,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 672.1800214254278,
         "spectral_centroid_trajectory_hz": [
-          476.82491183233606,
-          625.160065945684,
-          1213.6330763612996,
-          2338.541765451194,
-          3059.3491016383973
+          476.82491183233606, 625.160065945684, 1213.6330763612996,
+          2338.541765451194, 3059.3491016383973
         ],
         "spectral_flux": 0.1920337204917029,
         "spectral_rolloff_85_hz": 1179.0322580645163,
@@ -1631,11 +1532,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 1873.5534709961962,
         "spectral_centroid_trajectory_hz": [
-          49.22220160625205,
-          2162.0481774713016,
-          1841.5225064678257,
-          1857.846069607796,
-          1590.2750725224575
+          49.22220160625205, 2162.0481774713016, 1841.5225064678257,
+          1857.846069607796, 1590.2750725224575
         ],
         "spectral_flux": 0.14374750415213416,
         "spectral_rolloff_85_hz": 4530.357142857143,
@@ -1717,11 +1615,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 5302.234939108129,
         "spectral_centroid_trajectory_hz": [
-          5596.220511610366,
-          5483.113754605593,
-          5367.871773753863,
-          5271.939701674037,
-          5318.98571078674
+          5596.220511610366, 5483.113754605593, 5367.871773753863,
+          5271.939701674037, 5318.98571078674
         ],
         "spectral_flux": 0.2066931243179248,
         "spectral_rolloff_85_hz": 9533.75,
@@ -1803,11 +1698,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 1734.211736273322,
         "spectral_centroid_trajectory_hz": [
-          45.724198354297926,
-          2880.184979432297,
-          1930.364215331077,
-          2078.090907316575,
-          2569.089411792775
+          45.724198354297926, 2880.184979432297, 1930.364215331077,
+          2078.090907316575, 2569.089411792775
         ],
         "spectral_flux": 0.1790781933197223,
         "spectral_rolloff_85_hz": 3917.1428571428573,
@@ -1889,11 +1781,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 4632.717555763049,
         "spectral_centroid_trajectory_hz": [
-          444.6480895059694,
-          4272.694932897554,
-          4651.1307692208475,
-          4585.749305922152,
-          1837.90622425702
+          444.6480895059694, 4272.694932897554, 4651.1307692208475,
+          4585.749305922152, 1837.90622425702
         ],
         "spectral_flux": 0.1772753743189992,
         "spectral_rolloff_85_hz": 8906.153846153846,
@@ -1975,11 +1864,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 3898.689037439332,
         "spectral_centroid_trajectory_hz": [
-          367.21835083990965,
-          5053.72456810005,
-          4904.444343687015,
-          4881.265494232233,
-          1547.0667842912023
+          367.21835083990965, 5053.72456810005, 4904.444343687015,
+          4881.265494232233, 1547.0667842912023
         ],
         "spectral_flux": 0.18754849146034758,
         "spectral_rolloff_85_hz": 8453.401360544218,
@@ -2061,11 +1947,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 4582.937731632636,
         "spectral_centroid_trajectory_hz": [
-          483.7626653521964,
-          2772.4619995253133,
-          4670.224379964205,
-          4878.305471359742,
-          1976.5102504384881
+          483.7626653521964, 2772.4619995253133, 4670.224379964205,
+          4878.305471359742, 1976.5102504384881
         ],
         "spectral_flux": 0.17280124016807208,
         "spectral_rolloff_85_hz": 8857.407407407407,
@@ -2147,11 +2030,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 3986.055994292658,
         "spectral_centroid_trajectory_hz": [
-          761.5898792006366,
-          3193.256514488947,
-          3546.6328292791636,
-          4180.3775964939205,
-          0.0
+          761.5898792006366, 3193.256514488947, 3546.6328292791636,
+          4180.3775964939205, 0.0
         ],
         "spectral_flux": 0.16818001924137194,
         "spectral_rolloff_85_hz": 8212.162162162162,
@@ -2233,11 +2113,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 2996.669915295163,
         "spectral_centroid_trajectory_hz": [
-          744.1300276703457,
-          3144.4062101837085,
-          3041.5888030730725,
-          3232.199862007792,
-          0.0
+          744.1300276703457, 3144.4062101837085, 3041.5888030730725,
+          3232.199862007792, 0.0
         ],
         "spectral_flux": 0.17305446914814593,
         "spectral_rolloff_85_hz": 6567.5675675675675,
@@ -2319,11 +2196,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 722.225027051488,
         "spectral_centroid_trajectory_hz": [
-          458.94243512004186,
-          731.725100476246,
-          1233.3271463176932,
-          2525.2657836763633,
-          2595.865003446723
+          458.94243512004186, 731.725100476246, 1233.3271463176932,
+          2525.2657836763633, 2595.865003446723
         ],
         "spectral_flux": 0.18661072223189482,
         "spectral_rolloff_85_hz": 1361.2903225806454,
@@ -2405,11 +2279,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 553.6481726477998,
         "spectral_centroid_trajectory_hz": [
-          53.18948852364236,
-          280.2924538708066,
-          75.94226946996012,
-          2344.462793988268,
-          2849.064188781264
+          53.18948852364236, 280.2924538708066, 75.94226946996012,
+          2344.462793988268, 2849.064188781264
         ],
         "spectral_flux": 0.13939174543889196,
         "spectral_rolloff_85_hz": 472.5,
@@ -2491,11 +2362,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 1815.7642303611897,
         "spectral_centroid_trajectory_hz": [
-          49.75817054667238,
-          2037.0660296036597,
-          2834.274724835812,
-          1783.0156847618055,
-          1210.5609394946257
+          49.75817054667238, 2037.0660296036597, 2834.274724835812,
+          1783.0156847618055, 1210.5609394946257
         ],
         "spectral_flux": 0.14160209349625666,
         "spectral_rolloff_85_hz": 4348.571428571428,
@@ -2577,11 +2445,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 1844.9457169908783,
         "spectral_centroid_trajectory_hz": [
-          41.45024937012914,
-          2781.429687367926,
-          2017.9068808934167,
-          2137.531349133209,
-          2760.0008406178517
+          41.45024937012914, 2781.429687367926, 2017.9068808934167,
+          2137.531349133209, 2760.0008406178517
         ],
         "spectral_flux": 0.18178579585578186,
         "spectral_rolloff_85_hz": 4305.714285714286,
@@ -2663,11 +2528,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 5365.430017042151,
         "spectral_centroid_trajectory_hz": [
-          5242.573078525286,
-          5303.421127535654,
-          5250.971651078205,
-          5151.36931193746,
-          5296.983735620172
+          5242.573078525286, 5303.421127535654, 5250.971651078205,
+          5151.36931193746, 5296.983735620172
         ],
         "spectral_flux": 0.21134654154001886,
         "spectral_rolloff_85_hz": 9543.125,
@@ -2749,11 +2611,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 5371.458133176426,
         "spectral_centroid_trajectory_hz": [
-          5488.044283999801,
-          5332.352272787831,
-          5407.457404032196,
-          5204.759176991915,
-          5243.396605709243
+          5488.044283999801, 5332.352272787831, 5407.457404032196,
+          5204.759176991915, 5243.396605709243
         ],
         "spectral_flux": 0.20520605931515873,
         "spectral_rolloff_85_hz": 9532.857142857143,
@@ -2835,11 +2694,8 @@
         "sample_rate": 24000,
         "spectral_centroid_hz": 5334.994644324807,
         "spectral_centroid_trajectory_hz": [
-          5516.857945828509,
-          5062.918687947453,
-          5587.165171348861,
-          5407.350156632093,
-          5171.39987633128
+          5516.857945828509, 5062.918687947453, 5587.165171348861,
+          5407.350156632093, 5171.39987633128
         ],
         "spectral_flux": 0.20590419636622231,
         "spectral_rolloff_85_hz": 9620.714285714286,

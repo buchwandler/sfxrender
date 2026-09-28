@@ -31,7 +31,11 @@ def main(output_dir: str | Path | None = None) -> None:
         sounds.append(sound)
         print(f"Rendered {uri} -> {destination / filename}")
     gap = np.zeros(round(0.5 * renderer.sample_rate), dtype=np.float32)
-    parts = [part for index, sound in enumerate(sounds) for part in ((gap,) if index else ()) + (sound.samples,)]
+    parts = [
+        part
+        for index, sound in enumerate(sounds)
+        for part in ((gap,) if index else ()) + (sound.samples,)
+    ]
     showcase = RenderedSound(
         np.concatenate(parts),
         renderer.sample_rate,

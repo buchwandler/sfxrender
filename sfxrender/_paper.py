@@ -67,7 +67,12 @@ def render_paper_handle(
     control_values = control_rng.uniform(0.32, 1.0, control_count)
     activity = np.interp(np.arange(size), control_positions, control_values).astype(np.float32)
     fade = envelope_from_points(
-        [(0.0, 0.0), (min(0.08, duration * 0.2), 1.0), (max(0.09, duration - 0.10), 0.88), (duration, 0.0)],
+        [
+            (0.0, 0.0),
+            (min(0.08, duration * 0.2), 1.0),
+            (max(0.09, duration - 0.10), 0.88),
+            (duration, 0.0),
+        ],
         sample_rate,
         size,
     )

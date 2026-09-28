@@ -1,4 +1,4 @@
-"""Render fixed-seed phone and doorbell listening comparisons."""
+"""Render fixed-seed walking, running, and stair-footstep comparisons."""
 
 from __future__ import annotations
 
@@ -8,12 +8,20 @@ import numpy as np
 
 from sfxrender import RenderedSound, SFXRenderer, SfxSpec
 
-
-RINGING_ITEMS = (
-    ("phone-classic.wav", "sfx:phone.ring?style=classic&count=2&interval=1.2&seed=21"),
-    ("phone-electronic.wav", "sfx:phone.ring?style=electronic&count=2&interval=1.2&seed=21"),
-    ("doorbell-chime.wav", "sfx:doorbell.ring?style=chime&count=2&interval=0.8&seed=31"),
-    ("doorbell-electronic.wav", "sfx:doorbell.ring?style=electronic&count=2&interval=0.8&seed=31"),
+FOOTSTEP_ITEMS = (
+    ("footsteps-run-wood.wav", "sfx:footsteps.run?surface=wood&footwear=shoes&count=8&seed=801"),
+    (
+        "footsteps-run-gravel.wav",
+        "sfx:footsteps.run?surface=gravel&footwear=boots&count=7&seed=802",
+    ),
+    (
+        "footsteps-stairs-wood-up.wav",
+        "sfx:footsteps.stairs?surface=wood&direction=up&footwear=shoes&count=6&seed=803",
+    ),
+    (
+        "footsteps-stairs-stone-down.wav",
+        "sfx:footsteps.stairs?surface=stone&direction=down&footwear=boots&count=6&seed=804",
+    ),
 )
 
 
@@ -26,13 +34,12 @@ def main(output_dir: str | Path | None = None) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     renderer = SFXRenderer(sample_rate=24_000)
     sounds: list[RenderedSound] = []
-    for filename, uri in RINGING_ITEMS:
+    for filename, uri in FOOTSTEP_ITEMS:
         sound = renderer.render_uri(uri)
         sound.write_wav(destination / filename)
         sounds.append(sound)
         print(f"Rendered {uri} -> {destination / filename}")
-
-    gap = np.zeros(round(0.5 * renderer.sample_rate), dtype=np.float32)
+    gap = np.zeros(round(0.55 * renderer.sample_rate), dtype=np.float32)
     parts = [
         part
         for index, sound in enumerate(sounds)
@@ -41,9 +48,10 @@ def main(output_dir: str | Path | None = None) -> None:
     showcase = RenderedSound(
         np.concatenate(parts),
         renderer.sample_rate,
-        SfxSpec("example.ringing_quality_gallery", {}),
+        SfxSpec("example.footstep_quality_gallery", {}),
     )
-    showcase.write_wav(destination / "ringing-quality-showcase.wav")
+    showcase.write_wav(destination / "footstep-quality-showcase.wav")
+    print(f"Wrote combined showcase -> {destination / 'footstep-quality-showcase.wav'}")
 
 
 if __name__ == "__main__":
