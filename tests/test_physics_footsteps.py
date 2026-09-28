@@ -6,6 +6,9 @@ import numpy as np
 
 from sfxrender._foley_profiles import AGGREGATE_SURFACE_PROFILES, FOOTWEAR_PROFILES
 from sfxrender._footsteps import (
+    FrictionEvent,
+    FootstepExciter,
+    generate_footstep_exciter,
     _floor_modes,
     _mechanical_friction_audio,
     _sample_particle_events,
@@ -40,6 +43,7 @@ def test_loaded_slip_excitation_increases_with_ground_load() -> None:
     contact = FOOTWEAR_CONTACTS["boots"]
     low = _mechanical_friction_audio(
         grf=low_grf,
+        friction_events=(FrictionEvent(0.015, 0.14, 0.5, 1.0, "scuff"),),
         footwear=common_footwear,
         footwear_contact=contact,
         surface="wood",
@@ -49,6 +53,7 @@ def test_loaded_slip_excitation_increases_with_ground_load() -> None:
     )
     high = _mechanical_friction_audio(
         grf=high_grf,
+        friction_events=(FrictionEvent(0.015, 0.14, 0.5, 1.0, "scuff"),),
         footwear=common_footwear,
         footwear_contact=contact,
         surface="wood",
@@ -66,7 +71,7 @@ def test_particle_collision_energy_is_bounded_by_per_block_slip_work() -> None:
         (np.full(800, 0.85, dtype=np.float32), np.full(800, 0.08, dtype=np.float32))
     )
     events = _sample_particle_events(
-        grf=grf,
+        exciter=FootstepExciter(grf, (), (), 1.0),
         surface=AGGREGATE_SURFACE_PROFILES["gravel"],
         rng=np.random.default_rng(91),
         sample_rate=sample_rate,
@@ -90,6 +95,49 @@ def test_particle_collision_energy_is_bounded_by_per_block_slip_work() -> None:
             <= AGGREGATE_SURFACE_PROFILES["gravel"].maximum_energy
             for energy in energies
         )
+
+
+def test_aggregate_particles_follow_exciter_load_and_grain_populations() -> None:
+    surface = AGGREGATE_SURFACE_PROFILES["gravel"]
+    low_events = []
+    high_events = []
+    for seed in range(8):
+        low_exciter = generate_footstep_exciter(
+            sample_rate=16_000,
+            footwear="shoes",
+            force=0.2,
+            gait="walk",
+            step_interval_s=0.52,
+            rng=np.random.default_rng(seed),
+        )
+        high_exciter = generate_footstep_exciter(
+            sample_rate=16_000,
+            footwear="shoes",
+            force=0.8,
+            gait="walk",
+            step_interval_s=0.52,
+            rng=np.random.default_rng(seed),
+        )
+        low_events.extend(
+            _sample_particle_events(
+                exciter=low_exciter,
+                surface=surface,
+                rng=np.random.default_rng(seed + 100),
+                sample_rate=16_000,
+            )
+        )
+        high_events.extend(
+            _sample_particle_events(
+                exciter=high_exciter,
+                surface=surface,
+                rng=np.random.default_rng(seed + 100),
+                sample_rate=16_000,
+            )
+        )
+
+    assert len(high_events) > len(low_events)
+    assert sum(event.energy for event in high_events) > sum(event.energy for event in low_events)
+    assert {event.population for event in high_events} == {"small", "medium", "large"}
 
 
 def test_solid_footstep_reuses_physics_deterministically() -> None:

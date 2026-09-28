@@ -279,7 +279,7 @@ _BUILTIN_CATALOG: dict[str, dict[str, Any]] = {
         },
     },
     "footsteps.walk": {
-        "description": "A sequence of walking footsteps.",
+        "description": "A sequence of walking footsteps with pace-sensitive heel, sole, and toe contact articulation.",
         "parameters": {
             "surface": {
                 "type": "enum",
@@ -341,7 +341,7 @@ _BUILTIN_CATALOG: dict[str, dict[str, Any]] = {
         },
     },
     "footsteps.run": {
-        "description": "A quick sequence of running steps with heavier loading and irregular scuffs.",
+        "description": "A sequence of running steps with stronger loading, shorter contact articulation, and pace-sensitive scuffs.",
         "parameters": {
             "surface": {
                 "type": "enum",
@@ -395,7 +395,7 @@ _BUILTIN_CATALOG: dict[str, dict[str, Any]] = {
         },
     },
     "footsteps.stairs": {
-        "description": "Footsteps climbing or descending a wooden or stone stair flight.",
+        "description": "Footsteps climbing or descending stairs with direction-sensitive forefoot or landing emphasis.",
         "parameters": {
             "surface": {
                 "type": "enum",
@@ -1222,7 +1222,7 @@ _BUILTIN_CATALOG: dict[str, dict[str, Any]] = {
         },
     },
     "keyboard.typing": {
-        "description": "A finite sequence of plastic key and keyboard-frame micro-impacts.",
+        "description": "Naturalistic procedural computer-keyboard typing with varied key presses, release/top-out sounds, larger-key events, and humanized timing.",
         "parameters": {
             "speed": {
                 "type": "enum",

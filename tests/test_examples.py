@@ -55,6 +55,27 @@ def test_examples_write_reproducible_wavs_only_to_requested_directory(tmp_path: 
             "foley-footsteps-showcase.wav",
             "foley-quality-showcase.wav",
         ],
+        "footstep_quality_gallery.py": [
+            "01-walk-wood-shoes.wav",
+            "02-walk-wood-heels.wav",
+            "03-walk-wood-barefoot.wav",
+            "04-walk-stone-boots.wav",
+            "05-walk-gravel-shoes.wav",
+            "06-run-wood-shoes.wav",
+            "07-run-gravel-boots.wav",
+            "08-stairs-wood-up.wav",
+            "09-stairs-stone-down.wav",
+            "10-walk-wood-slow.wav",
+            "11-walk-wood-fast.wav",
+            "footstep-quality-showcase.wav",
+        ],
+        "keyboard_quality_gallery.py": [
+            "keyboard-slow-light.wav",
+            "keyboard-steady-light.wav",
+            "keyboard-fast-light.wav",
+            "keyboard-fast-firm.wav",
+            "keyboard-quality-showcase.wav",
+        ],
         "door_quality_gallery.py": [
             "01-door-open-wood-slow-creaky.wav",
             "02-door-open-wood-slow-low-creak.wav",
@@ -123,6 +144,27 @@ def test_examples_write_reproducible_wavs_only_to_requested_directory(tmp_path: 
             footstep_frames += audio.getnframes()
     with wave.open(str(gallery_dir / gallery_names[-2]), "rb") as audio:
         assert audio.getnframes() == footstep_frames + gap_frames * 7
+
+    pace_names = scripts["footstep_quality_gallery.py"]
+    pace_dir = tmp_path / "footstep_quality_gallery"
+    pace_frames = 0
+    for filename in pace_names[:-1]:
+        with wave.open(str(pace_dir / filename), "rb") as audio:
+            pace_frames += audio.getnframes()
+    with wave.open(str(pace_dir / pace_names[-1]), "rb") as audio:
+        assert audio.getnframes() == pace_frames + gap_frames * (len(pace_names) - 2)
+    assert (pace_dir / "10-walk-wood-slow.wav").read_bytes() != (
+        pace_dir / "11-walk-wood-fast.wav"
+    ).read_bytes()
+
+    keyboard_names = scripts["keyboard_quality_gallery.py"]
+    keyboard_dir = tmp_path / "keyboard_quality_gallery"
+    keyboard_frames = 0
+    for filename in keyboard_names[:-1]:
+        with wave.open(str(keyboard_dir / filename), "rb") as audio:
+            keyboard_frames += audio.getnframes()
+    with wave.open(str(keyboard_dir / keyboard_names[-1]), "rb") as audio:
+        assert audio.getnframes() == keyboard_frames + gap_frames * (len(keyboard_names) - 2)
 
 
 def test_analyze_foley_writes_deterministic_metrics_to_requested_directory(

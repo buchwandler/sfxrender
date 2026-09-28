@@ -118,68 +118,6 @@ def render_keys_jingle(*, sample_rate: int, duration: float, style: str, seed: i
     )
 
 
-def _key_action(
-    *, sample_rate: int, duration: float, speed: str, force: str, seed: int
-) -> FloatAudio:
-    rng = component_rng(seed, _METAL_NAMESPACE, 30, sample_rate)
-    contact = ImpactContact(0.006, 1.4e7, exponent=1.5, restitution=0.20)
-    key = _resonator(
-        ((760.0, 0.045, 0.48), (1_540.0, 0.032, 0.31), (2_640.0, 0.020, 0.18)),
-        seed=seed,
-        sample_rate=sample_rate,
-        component_id=31,
-        contact=contact,
-        output_gain=5.0,
-    )
-    frame = _resonator(
-        ((230.0, 0.10, 0.43), (510.0, 0.075, 0.30), (1_050.0, 0.045, 0.16)),
-        seed=seed,
-        sample_rate=sample_rate,
-        component_id=32,
-        contact=contact,
-        output_gain=3.0,
-    )
-    rate_hz = {"slow": 2.5, "steady": 5.5, "fast": 10.5}[speed]
-    velocity = {"light": 0.11, "firm": 0.19}[force]
-    events = sample_stochastic_events(
-        duration_s=duration,
-        sample_rate=sample_rate,
-        rate_hz=rate_hz,
-        seed=seed,
-        component_id=33,
-        event_duration_s=(0.008, 0.035),
-    )
-    strikes: list[StrikeEvent] = []
-    for event in events:
-        event_time = event.start_sample / sample_rate
-        strikes.append(StrikeEvent(event_time, velocity * event.level, 0))
-        frame_delay = float(rng.uniform(0.0015, 0.004))
-        if event_time + frame_delay < duration:
-            strikes.append(StrikeEvent(event_time + frame_delay, velocity * 0.35 * event.level, 1))
-    return render_strike_train(
-        events=strikes,
-        resonators=(key, frame),
-        duration_s=duration,
-        sample_rate=sample_rate,
-        rngs=(
-            component_rng(seed, _METAL_NAMESPACE, 34, sample_rate),
-            component_rng(seed, _METAL_NAMESPACE, 35, sample_rate),
-        ),
-    )
-
-
-def render_keyboard_typing(
-    *, sample_rate: int, duration: float, speed: str, force: str, seed: int
-) -> FloatAudio:
-    return _key_action(
-        sample_rate=sample_rate,
-        duration=duration,
-        speed=speed,
-        force=force,
-        seed=seed,
-    )
-
-
 def render_clock_tick(
     *, sample_rate: int, duration: float, style: str, rate: str, seed: int
 ) -> FloatAudio:

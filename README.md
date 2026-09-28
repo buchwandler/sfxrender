@@ -81,7 +81,7 @@ SFXRender does **not** parse SSMD. The consuming application parses its document
 - `pen.write`
 - `printer.wake`
 
-Built-in footsteps and knocks use deterministic, NumPy-only procedural synthesis rather than bundled recordings. Footsteps retain the staged ground-reaction-force and heel/sole/toe timing: compliant contact excites effective floor modes, footwear/floor presets shape contact and radiation, and bounded friction/roughness and gravel events draw energy from load and slip. Knocks use a compliant force pulse, geometry-aware modal objects, and strike-position coupling rather than random body-frequency jitter. Fixed URIs render finite mono float audio deterministically, including seeded step-to-step variation.
+Built-in footsteps and knocks use deterministic, NumPy-only procedural synthesis rather than bundled recordings. Footsteps compose a gait-, footwear-, force-, and pace-aware interaction exciter with reusable impact, friction, modal, and stochastic particle models. Pace shapes the individual contact envelope and heel/toe articulation, while aggregate surfaces retain load-driven grain collisions within an energy budget. Keyboard typing uses deterministic burst and pause grammar with varied key classes, separate press and release events, and subtle case coupling. Fixed URIs render finite mono float audio deterministically, including seeded variation.
 
 Door effects use a shared effective assembly with stable panel/frame resonances, inertia-loaded hinge friction, spatial roughness, and physical latch/stop contacts. Open and close actions excite the same generated door differently; matching material and seed intentionally identify the same object. Semantic controls such as `speed`, `creak`, and `force` alter its motion/contact behavior without changing the public URI/API.
 
@@ -225,6 +225,15 @@ python examples/foley_quality_gallery.py
 
 It writes eight ordered footstep WAVs, including same-seed footwear and light/heavy-load A/B cases, six knocks including same-seed wood/oak and soft-fingertip/hard-metal-impactor contrasts, a footstep-only `foley-footsteps-showcase.wav`, and a combined `foley-quality-showcase.wav` under `example-artifacts/`; both strips leave 550 ms between cases. Third-party recordings for local listening or measurement belong under the gitignored `reference-audio/` directory. They are not fetched, bundled, packaged, or committed.
 
+Render the expanded locomotion and keyboard listening galleries with:
+
+```bash
+python examples/footstep_quality_gallery.py
+python examples/keyboard_quality_gallery.py
+```
+
+The footstep gallery writes nine footwear, surface, and gait cases plus a same-seed single-step slow/fast pace pair and `footstep-quality-showcase.wav`. The keyboard gallery writes slow, steady, and fast light typing, a fast firm comparison, and `keyboard-quality-showcase.wav`. Both write to `example-artifacts/` by default and accept a custom output directory when called from Python.
+
 Render the door-specific fixed-seed gallery with:
 
 ```bash
@@ -255,6 +264,8 @@ It writes `door-analysis.txt` beneath `example-artifacts/` (or a caller-supplied
 - [`examples/audiobook_scene.py`](examples/audiobook_scene.py) — a short composed arrival scene with footsteps, knocks, and a door opening.
 - [`examples/parameter_gallery.py`](examples/parameter_gallery.py) — same-seed comparisons of knock materials and walking surfaces.
 - [`examples/foley_quality_gallery.py`](examples/foley_quality_gallery.py) — fixed-seed Foley surface, footwear, and knock comparisons.
+- [`examples/footstep_quality_gallery.py`](examples/footstep_quality_gallery.py): fixed-seed surface, footwear, gait, and same-seed pace comparisons.
+- [`examples/keyboard_quality_gallery.py`](examples/keyboard_quality_gallery.py): fixed-seed typing pace and force comparisons.
 - [`examples/analyze_foley.py`](examples/analyze_foley.py) — reproducible spectral and contact-stage metrics for the fixed footstep cases.
 - [`examples/door_quality_gallery.py`](examples/door_quality_gallery.py) — fixed-seed opening/closing gallery, including a same-seed paired door.
 - [`examples/analyze_doors.py`](examples/analyze_doors.py) — NumPy-only waveform and generated door-model metrics.
@@ -266,6 +277,8 @@ Run the other examples after installation:
 python examples/audiobook_scene.py
 python examples/parameter_gallery.py
 python examples/foley_quality_gallery.py
+python examples/footstep_quality_gallery.py
+python examples/keyboard_quality_gallery.py
 python examples/analyze_foley.py
 python examples/door_quality_gallery.py
 python examples/analyze_doors.py

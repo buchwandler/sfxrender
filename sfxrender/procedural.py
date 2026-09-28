@@ -44,10 +44,10 @@ from ._environment import (
     render_transition_whoosh,
     render_wind,
 )
+from ._keyboard import render_keyboard_typing
 from ._metal_effects import (
     render_alarm_ring,
     render_clock_tick,
-    render_keyboard_typing,
     render_keys_jingle,
 )
 from ._material_effects import (
@@ -312,8 +312,9 @@ def _footstep_hit(
     force: float,
     side: float,
     gait: str = "walk",
+    step_interval_s: float,
 ) -> FloatAudio:
-    """Route one event through its gait-specific shared foot-ground model."""
+    """Route one pace-aware event through the shared foot-ground model."""
     side_variation = 0.09 if gait == "run" else 0.03
     local_force = force * (1.0 + side_variation * side)
     if surface == "gravel":
@@ -324,6 +325,7 @@ def _footstep_hit(
             force=local_force,
             rng=rng,
             gait=gait,
+            step_interval_s=step_interval_s,
         )
     return solid_footstep(
         sample_rate=sample_rate,
@@ -332,6 +334,7 @@ def _footstep_hit(
         force=local_force,
         rng=rng,
         gait=gait,
+        step_interval_s=step_interval_s,
     )
 
 
@@ -383,6 +386,7 @@ def _render_footstep_sequence(
             force=gait_force,
             side=side,
             gait=gait,
+            step_interval_s=interval,
         )
         variation = 0.15 if gait == "run" else 0.08 if gait.startswith("stairs_") else 0.05
         side_gain = 0.09 if gait == "run" else 0.06 if gait.startswith("stairs_") else 0.025

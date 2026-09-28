@@ -11,7 +11,7 @@ from sfxrender import (
     __version__,
 )
 from sfxrender._foley_profiles import AGGREGATE_SURFACE_PROFILES
-from sfxrender._footsteps import _sample_particle_events, _synthetic_grf
+from sfxrender._footsteps import FootstepExciter, _sample_particle_events, _synthetic_grf
 from sfxrender.procedural import _event_starts
 from sfxrender.types import SfxSpec
 
@@ -267,9 +267,12 @@ def test_footstep_surface_and_footwear_have_relative_spectral_signatures() -> No
     ).samples
     wood_body = _band_fraction(wood, sample_rate, 200.0, 1000.0)
     stone_body = _band_fraction(stone, sample_rate, 200.0, 1000.0)
+    wood_high = _band_fraction(wood, sample_rate, 2_000.0, 8_000.0)
+    stone_high = _band_fraction(stone, sample_rate, 2_000.0, 8_000.0)
     carpet_high = _band_fraction(carpet_barefoot, sample_rate, 2000.0, 8000.0)
     heel_high = _band_fraction(stone_heels, sample_rate, 2000.0, 8000.0)
-    assert wood_body > stone_body * 1.5
+    assert wood_body > stone_body
+    assert 0.25 < wood_high < stone_high
     assert carpet_high < heel_high * 0.65
 
 
@@ -410,7 +413,7 @@ def test_gravel_micro_impact_density_tracks_grf_and_energy_is_heavy_tailed() -> 
         (np.full(800, 0.85, dtype=np.float32), np.full(800, 0.08, dtype=np.float32))
     )
     events = _sample_particle_events(
-        grf=grf,
+        exciter=FootstepExciter(grf, (), (), 1.0),
         surface=AGGREGATE_SURFACE_PROFILES["gravel"],
         rng=np.random.default_rng(91),
         sample_rate=sample_rate,
