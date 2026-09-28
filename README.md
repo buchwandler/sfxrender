@@ -87,6 +87,98 @@ Door effects use a shared effective assembly with stable panel/frame resonances,
 
 Built-in renderers validate parameter names and values against SFXRender's effect catalog; unknown names and invalid values raise public typed errors instead of being silently ignored.
 
+## LLM / authoring discovery
+
+SFXRender exposes structured catalog data rather than a provider-specific prompt. Use the runtime manifest to discover built-in and described custom effects; it includes effect descriptions, semantic use/avoid guidance, parameter types and descriptions, enum choices, bounds, defaults, valid URI examples, and portable authoring rules:
+
+```python
+import json
+
+from sfxrender import SFXRenderer
+
+renderer = SFXRenderer()
+manifest = renderer.llm_catalog()
+print(json.dumps(manifest, indent=2, sort_keys=True))
+```
+
+For built-ins only, use `from sfxrender import llm_catalog` and call `llm_catalog()`. `renderer.catalog()` returns the runtime descriptor catalog, while the module-level `catalog()` remains built-in-only.
+
+The CLI prints the built-in authoring manifest as deterministic JSON:
+
+```bash
+sfxrender --llm-catalog
+```
+
+Before inserting a generated URI into an SSMD document, validate it without rendering audio:
+
+```python
+spec = renderer.validate_uri(
+    "sfx:printer.print?pages=3&speed=normal&seed=301"
+)
+```
+
+For reproducible rendering, use a stable non-negative seed when desired; a seed is optional unless an effect's descriptor says otherwise. For the same generated door identity, reuse both `material` and `seed` across opening and closing actions:
+
+```ssmd
+[door opens]{src="sfx:door.open?material=wood&seed=501"}
+...
+[door closes]{src="sfx:door.close?material=wood&seed=501"}
+```
+
+### Describing a custom effect
+
+A custom renderer can publish its authoring contract when registered:
+
+```python
+from sfxrender import RenderContext, RenderedSound, SFXRenderer, SfxSpec
+
+renderer = SFXRenderer()
+
+def keyboard_renderer(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    ...
+
+renderer.register(
+    "office.keyboard",
+    keyboard_renderer,
+    descriptor={
+        "description": "Typing on a computer keyboard.",
+        "parameters": {
+            "duration": {
+                "type": "seconds",
+                "minimum": 0.2,
+                "maximum": 30.0,
+                "default": 2.0,
+                "description": "How long typing continues.",
+            },
+            "speed": {
+                "type": "enum",
+                "values": ["slow", "normal", "fast"],
+                "default": "normal",
+                "description": "Typing cadence.",
+            },
+            "seed": {
+                "type": "integer",
+                "required": False,
+                "description": "Optional non-negative deterministic variation seed.",
+            },
+        },
+        "llm": {
+            "use_when": ["someone types audibly on a computer keyboard"],
+            "avoid_when": ["a character uses a computer without audible typing"],
+            "examples": [
+                "sfx:office.keyboard?duration=2&speed=normal&seed=42"
+            ],
+        },
+    },
+)
+
+renderer.validate_uri(
+    "sfx:office.keyboard?duration=2&speed=normal&seed=42"
+)
+```
+
+Custom renderers registered without a descriptor remain renderable but are intentionally not advertised in `renderer.catalog()` or the LLM authoring catalog. A descriptor without `llm.use_when` and valid `llm.examples` is also omitted from the authoring manifest. If no listed catalog effect matches a scene event, authoring models should omit an SFX rather than inventing a new `sfx:` effect name. In an SSMD audio span, keep the bracket text a short sound description, not replacement dialogue.
+
 ## Printer-story audio spans
 
 SFXRender provides deterministic printer and pen events through semantic URIs; the consuming application resolves `src` rather than having SSMD synthesize audio. For example, the printer story can include:

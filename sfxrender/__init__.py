@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError, version
 
-from .catalog import catalog
+from .catalog import catalog, llm_catalog
 from .core import EffectRenderer, SFXRenderer
 from .errors import (
     InvalidEffectParameterError,
@@ -34,5 +34,6 @@ __all__ = [
     "UnknownEffectError",
     "__version__",
     "catalog",
+    "llm_catalog",
     "parse_sfx_uri",
 ]

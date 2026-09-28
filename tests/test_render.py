@@ -53,6 +53,22 @@ def test_builtin_effects_render() -> None:
         assert float(np.max(np.abs(sound.samples))) <= 1.0
 
 
+def test_validate_uri_returns_spec_without_invoking_renderer() -> None:
+    renderer = SFXRenderer()
+
+    def unexpected_render(_spec: SfxSpec, _context: object) -> None:
+        raise AssertionError("validate_uri must not invoke the audio renderer")
+
+    renderer._renderers["impact.knock"] = unexpected_render
+    spec = renderer.validate_uri("sfx:impact.knock?material=oak&count=3&force=0.65&seed=301")
+
+    assert spec == SfxSpec(
+        "impact.knock",
+        {"material": "oak", "count": "3", "force": "0.65", "seed": "301"},
+    )
+    assert renderer.validate(spec) is spec
+
+
 @pytest.mark.parametrize("sample_rate", [22_050, 24_000, 44_100, 48_000])
 def test_requested_sample_rate_is_honored(sample_rate: int) -> None:
     rendered = SFXRenderer(sample_rate=sample_rate).render_uri(
