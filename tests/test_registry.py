@@ -68,7 +68,10 @@ def _custom_descriptor(description: str = "A documented keyboard sound.") -> dic
 
 def test_described_custom_renderer_is_runtime_catalog_discoverable() -> None:
     renderer = SFXRenderer()
-    callback = lambda spec, _context: renderer.render(spec)
+
+    def callback(spec: SfxSpec, _context: RenderContext) -> RenderedSound:
+        return renderer.render(spec)
+
     renderer.register("custom.keyboard", callback, descriptor=_custom_descriptor())
 
     assert "custom.keyboard" in renderer.effects()
@@ -82,17 +85,25 @@ def test_described_custom_renderer_is_runtime_catalog_discoverable() -> None:
 
 def test_replacement_preserves_or_atomically_updates_descriptors() -> None:
     renderer = SFXRenderer()
-    original = lambda spec, _context: renderer.render(spec)
+
+    def original(spec: SfxSpec, _context: RenderContext) -> RenderedSound:
+        return renderer.render(spec)
+
     renderer.register("custom.keyboard", original, descriptor=_custom_descriptor())
     original_descriptor = renderer.catalog()["custom.keyboard"]
 
-    replacement = lambda spec, _context: renderer.render(spec)
+    def replacement(spec: SfxSpec, _context: RenderContext) -> RenderedSound:
+        return renderer.render(spec)
+
     renderer.register("custom.keyboard", replacement, replace=True)
     assert renderer._renderers["custom.keyboard"] is replacement
     assert renderer.catalog()["custom.keyboard"] == original_descriptor
 
     updated_descriptor = _custom_descriptor("A different documented keyboard sound.")
-    updated_renderer = lambda spec, _context: renderer.render(spec)
+
+    def updated_renderer(spec: SfxSpec, _context: RenderContext) -> RenderedSound:
+        return renderer.render(spec)
+
     renderer.register(
         "custom.keyboard",
         updated_renderer,
@@ -116,7 +127,10 @@ def test_replacement_preserves_or_atomically_updates_descriptors() -> None:
 
 def test_invalid_new_descriptor_does_not_register_renderer() -> None:
     renderer = SFXRenderer()
-    callback = lambda spec, _context: renderer.render(spec)
+
+    def callback(spec: SfxSpec, _context: RenderContext) -> RenderedSound:
+        return renderer.render(spec)
+
     with pytest.raises(ValueError):
         renderer.register(
             "custom.invalid",
@@ -167,7 +181,10 @@ def _custom_parameter_descriptor() -> dict[str, object]:
 
 def test_described_custom_effects_use_descriptor_validation() -> None:
     renderer = SFXRenderer()
-    callback = lambda spec, _context: renderer.render(spec)
+
+    def callback(spec: SfxSpec, _context: RenderContext) -> RenderedSound:
+        return renderer.render(spec)
+
     renderer.register(
         "custom.keyboard",
         callback,
