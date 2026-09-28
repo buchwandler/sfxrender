@@ -1,0 +1,2856 @@
+{
+  "catalog": {
+    "door.close": {
+      "description": "Close a generated door model with hinge motion, frame impact, and latch catch.",
+      "llm": {
+        "avoid_when": [
+          "the door is opening",
+          "someone only knocks on the door",
+          "another kind of drawer or tray closes"
+        ],
+        "examples": [
+          "sfx:door.close?material=wood&speed=normal&creak=0.25&force=0.65&seed=42",
+          "sfx:door.close?material=metal&speed=fast&force=0.9&seed=43"
+        ],
+        "use_when": [
+          "a wooden or metal door audibly closes",
+          "a door shuts and its frame or latch contact should be heard"
+        ]
+      },
+      "parameters": {
+        "creak": {
+          "default": 0.25,
+          "description": "Amount of audible hinge friction or creak during closing.",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        "force": {
+          "default": 0.65,
+          "description": "Strength of the terminal frame and latch impact.",
+          "maximum": 1.0,
+          "minimum": 0.05,
+          "type": "number"
+        },
+        "material": {
+          "default": "wood",
+          "description": "Door construction family.",
+          "type": "enum",
+          "values": [
+            "wood",
+            "metal"
+          ]
+        },
+        "seed": {
+          "description": "Optional non-negative deterministic variation seed that identifies the generated door. Reuse the same material and seed for its matching open sound.",
+          "required": false,
+          "type": "integer"
+        },
+        "speed": {
+          "default": "normal",
+          "description": "Closing motion speed.",
+          "type": "enum",
+          "values": [
+            "slow",
+            "normal",
+            "fast"
+          ]
+        }
+      }
+    },
+    "door.open": {
+      "description": "Open a generated door model with latch, hinge friction, and body resonance.",
+      "llm": {
+        "avoid_when": [
+          "the door only closes",
+          "someone only knocks on the door",
+          "a drawer, cabinet, or printer tray opens"
+        ],
+        "examples": [
+          "sfx:door.open?material=wood&speed=slow&creak=0.7&force=0.45&seed=42",
+          "sfx:door.open?material=metal&speed=fast&creak=0.3&seed=43"
+        ],
+        "use_when": [
+          "a wooden or metal door audibly opens",
+          "a character opens a door and latch or hinge motion should be heard"
+        ]
+      },
+      "parameters": {
+        "creak": {
+          "default": 0.65,
+          "description": "Amount of audible hinge friction or creak from 0 to 1.",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        "force": {
+          "default": 0.45,
+          "description": "Strength of handle, latch, and mechanical excitation during opening.",
+          "maximum": 1.0,
+          "minimum": 0.05,
+          "type": "number"
+        },
+        "material": {
+          "default": "wood",
+          "description": "Door construction family.",
+          "type": "enum",
+          "values": [
+            "wood",
+            "metal"
+          ]
+        },
+        "seed": {
+          "description": "Optional non-negative deterministic variation seed that identifies the generated door. Reuse the same material and seed for its matching close sound.",
+          "required": false,
+          "type": "integer"
+        },
+        "speed": {
+          "default": "normal",
+          "description": "Opening motion speed.",
+          "type": "enum",
+          "values": [
+            "slow",
+            "normal",
+            "fast"
+          ]
+        }
+      }
+    },
+    "footsteps.walk": {
+      "description": "A sequence of walking footsteps.",
+      "llm": {
+        "avoid_when": [
+          "the character is running",
+          "only a single unrelated impact is described",
+          "movement is visual or implied but not audibly relevant"
+        ],
+        "examples": [
+          "sfx:footsteps.walk?surface=wood&footwear=boots&count=6&force=0.6&interval=0.52&seed=42",
+          "sfx:footsteps.walk?surface=gravel&footwear=shoes&count=4&seed=43"
+        ],
+        "use_when": [
+          "a character walks and the footsteps are audible",
+          "someone approaches, crosses, or leaves a space on foot",
+          "the scene explicitly calls for a sequence of walking steps"
+        ]
+      },
+      "parameters": {
+        "count": {
+          "default": 4,
+          "description": "Number of audible walking steps.",
+          "maximum": 64,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "footwear": {
+          "default": "shoes",
+          "description": "Footwear making contact with the walking surface.",
+          "type": "enum",
+          "values": [
+            "barefoot",
+            "shoes",
+            "boots",
+            "heels"
+          ]
+        },
+        "force": {
+          "default": 0.6,
+          "description": "Perceived loading and strength of the steps.",
+          "maximum": 1.0,
+          "minimum": 0.05,
+          "type": "number"
+        },
+        "interval": {
+          "default": 0.52,
+          "description": "Approximate spacing in seconds between steps.",
+          "maximum": 2.0,
+          "minimum": 0.18,
+          "type": "seconds"
+        },
+        "seed": {
+          "description": "Optional non-negative deterministic variation seed. Reuse the same seed when reproducible output is required.",
+          "required": false,
+          "type": "integer"
+        },
+        "surface": {
+          "default": "wood",
+          "description": "Floor or ground material being walked on.",
+          "type": "enum",
+          "values": [
+            "wood",
+            "stone",
+            "gravel",
+            "carpet"
+          ]
+        }
+      }
+    },
+    "impact.knock": {
+      "description": "One or more knocks on a resonant surface.",
+      "llm": {
+        "avoid_when": [
+          "a door itself opens or closes",
+          "the sound is a heavy crash rather than a knock",
+          "footsteps are being described"
+        ],
+        "examples": [
+          "sfx:impact.knock?material=oak&impactor=knuckle&count=3&force=0.65&seed=42",
+          "sfx:impact.knock?material=metal&impactor=fingertip&count=2&force=0.35&seed=43"
+        ],
+        "use_when": [
+          "someone knocks on a door",
+          "someone raps or taps on a resonant wall or surface",
+          "a small object strikes a resonant surface in a knock-like way"
+        ]
+      },
+      "parameters": {
+        "count": {
+          "default": 1,
+          "description": "Number of audible knocks.",
+          "maximum": 16,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "force": {
+          "default": 0.65,
+          "description": "Strength of each knock; lower values are gentler.",
+          "maximum": 1.0,
+          "minimum": 0.05,
+          "type": "number"
+        },
+        "impactor": {
+          "default": "knuckle",
+          "description": "Object or body part making contact with the surface.",
+          "type": "enum",
+          "values": [
+            "fingertip",
+            "knuckle",
+            "wooden_object",
+            "metal_object"
+          ]
+        },
+        "interval": {
+          "default": 0.22,
+          "description": "Approximate spacing in seconds between repeated knocks.",
+          "maximum": 2.0,
+          "minimum": 0.08,
+          "type": "seconds"
+        },
+        "material": {
+          "default": "wood",
+          "description": "Resonant surface being struck.",
+          "type": "enum",
+          "values": [
+            "wood",
+            "oak",
+            "metal",
+            "wall"
+          ]
+        },
+        "seed": {
+          "description": "Optional non-negative deterministic variation seed. Reuse the same seed when reproducible output is required.",
+          "required": false,
+          "type": "integer"
+        }
+      }
+    },
+    "pen.write": {
+      "description": "A pen writing and scratching across paper.",
+      "llm": {
+        "avoid_when": [
+          "a pencil is specifically required",
+          "someone is typing rather than handwriting",
+          "the pen is merely picked up but does not write"
+        ],
+        "examples": [
+          "sfx:pen.write?duration=1.6&speed=normal&pressure=0.55&seed=42",
+          "sfx:pen.write?duration=2.4&speed=slow&pressure=0.7&seed=43"
+        ],
+        "use_when": [
+          "a character writes by hand with a pen",
+          "pen scratching on paper should be audible",
+          "someone scribbles or writes an address or note by hand"
+        ]
+      },
+      "parameters": {
+        "duration": {
+          "default": 1.6,
+          "description": "Approximate duration in seconds of continuous handwriting activity.",
+          "maximum": 8.0,
+          "minimum": 0.25,
+          "type": "seconds"
+        },
+        "pressure": {
+          "default": 0.55,
+          "description": "Pen-to-paper contact strength from light to heavy.",
+          "maximum": 1.0,
+          "minimum": 0.1,
+          "type": "number"
+        },
+        "seed": {
+          "description": "Optional non-negative deterministic variation seed. Reuse the same seed when reproducible output is required.",
+          "required": false,
+          "type": "integer"
+        },
+        "speed": {
+          "default": "normal",
+          "description": "Handwriting stroke speed and cadence.",
+          "type": "enum",
+          "values": [
+            "slow",
+            "normal",
+            "fast"
+          ]
+        }
+      }
+    },
+    "phone.ring": {
+      "description": "A classic or electronic telephone ring.",
+      "llm": {
+        "avoid_when": [
+          "a phone merely vibrates",
+          "a notification beep or text-message alert is described",
+          "a person is already speaking on the phone"
+        ],
+        "examples": [
+          "sfx:phone.ring?style=classic&count=2&seed=42",
+          "sfx:phone.ring?style=electronic&count=3&interval=0.72&seed=43"
+        ],
+        "use_when": [
+          "a telephone audibly rings",
+          "a phone begins ringing in a scene"
+        ]
+      },
+      "parameters": {
+        "count": {
+          "default": 1,
+          "description": "Number of audible ring events.",
+          "maximum": 12,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "interval": {
+          "default": 1.15,
+          "description": "Approximate spacing in seconds between repeated rings.",
+          "maximum": 5.0,
+          "minimum": 0.25,
+          "type": "seconds"
+        },
+        "seed": {
+          "description": "Optional non-negative deterministic variation seed. Reuse the same seed when reproducible output is required.",
+          "required": false,
+          "type": "integer"
+        },
+        "style": {
+          "default": "classic",
+          "description": "Ring character: classic mechanical-style or electronic.",
+          "type": "enum",
+          "values": [
+            "classic",
+            "electronic"
+          ]
+        }
+      }
+    },
+    "printer.power_switch": {
+      "description": "Operate a printer power control and its local relay/mechanical response.",
+      "llm": {
+        "avoid_when": [
+          "the full printer boot or restart sequence is the intended sound",
+          "the printer merely wakes from sleep"
+        ],
+        "examples": [
+          "sfx:printer.power_switch?state=off&seed=42",
+          "sfx:printer.power_switch?state=on&seed=42"
+        ],
+        "use_when": [
+          "someone physically switches a printer off",
+          "someone physically switches a printer on",
+          "a printer power control and local relay response are audible"
+        ]
+      },
+      "parameters": {
+        "seed": {
+          "description": "Optional non-negative deterministic variation seed for switch and relay sounds. Reuse the same seed when reproducible output is required.",
+          "required": false,
+          "type": "integer"
+        },
+        "state": {
+          "default": "off",
+          "description": "Whether the audible power action switches the printer off or on.",
+          "type": "enum",
+          "values": [
+            "off",
+            "on"
+          ]
+        }
+      }
+    },
+    "printer.print": {
+      "description": "Feed and print one or more sheets through an office printer.",
+      "llm": {
+        "avoid_when": [
+          "the printer only displays a message",
+          "the printer wakes without printing",
+          "the printer performs a reboot or calibration without feeding paper"
+        ],
+        "examples": [
+          "sfx:printer.print?pages=1&speed=normal&seed=42",
+          "sfx:printer.print?pages=3&speed=normal&seed=43"
+        ],
+        "use_when": [
+          "an office printer audibly prints one or more sheets",
+          "paper is visibly or audibly fed out of a printer",
+          "a printer produces a page"
+        ]
+      },
+      "parameters": {
+        "pages": {
+          "default": 1,
+          "description": "Number of sheets audibly fed and printed.",
+          "maximum": 12,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "seed": {
+          "description": "Optional non-negative deterministic variation seed. Reuse the same seed when reproducible output is required.",
+          "required": false,
+          "type": "integer"
+        },
+        "speed": {
+          "default": "normal",
+          "description": "Mechanical page-feed speed.",
+          "type": "enum",
+          "values": [
+            "slow",
+            "normal",
+            "fast"
+          ]
+        }
+      }
+    },
+    "printer.restart": {
+      "description": "Printer boot and mechanical calibration sequence after power-on.",
+      "llm": {
+        "avoid_when": [
+          "only the power button click is needed",
+          "the printer merely wakes from sleep",
+          "the printer is actively printing pages"
+        ],
+        "examples": [
+          "sfx:printer.restart?speed=normal&seed=42",
+          "sfx:printer.restart?speed=fast&seed=43"
+        ],
+        "use_when": [
+          "a printer restarts or boots after power-on",
+          "a printer performs a substantial startup or calibration sequence"
+        ]
+      },
+      "parameters": {
+        "seed": {
+          "description": "Optional non-negative deterministic variation seed for motor and fan sounds. Reuse the same seed when reproducible output is required.",
+          "required": false,
+          "type": "integer"
+        },
+        "speed": {
+          "default": "normal",
+          "description": "Duration and speed of the startup calibration sequence.",
+          "type": "enum",
+          "values": [
+            "slow",
+            "normal",
+            "fast"
+          ]
+        }
+      }
+    },
+    "printer.tray_open": {
+      "description": "Unlatch and slide open a printer paper tray.",
+      "llm": {
+        "avoid_when": [
+          "paper is being printed",
+          "a normal room door opens",
+          "the tray remains closed while paper is checked visually"
+        ],
+        "examples": [
+          "sfx:printer.tray_open?speed=normal&paper_load=full&seed=42",
+          "sfx:printer.tray_open?speed=fast&paper_load=empty&seed=43"
+        ],
+        "use_when": [
+          "someone opens a printer paper tray",
+          "a printer paper drawer unlatches and slides open"
+        ]
+      },
+      "parameters": {
+        "paper_load": {
+          "default": "full",
+          "description": "Approximate amount of paper in the tray; controls loose paper movement.",
+          "type": "enum",
+          "values": [
+            "empty",
+            "partial",
+            "full"
+          ]
+        },
+        "seed": {
+          "description": "Optional non-negative deterministic variation seed. Reuse the same seed when reproducible output is required.",
+          "required": false,
+          "type": "integer"
+        },
+        "speed": {
+          "default": "normal",
+          "description": "Speed at which the printer tray slides open.",
+          "type": "enum",
+          "values": [
+            "slow",
+            "normal",
+            "fast"
+          ]
+        }
+      }
+    },
+    "printer.wake": {
+      "description": "Wake a sleeping printer with a short relay, motor, and fan response.",
+      "llm": {
+        "avoid_when": [
+          "the printer performs a full power-on restart",
+          "paper is actually being printed",
+          "only the physical power switch is pressed"
+        ],
+        "examples": [
+          "sfx:printer.wake?depth=light&seed=42",
+          "sfx:printer.wake?depth=deep&seed=43"
+        ],
+        "use_when": [
+          "a sleeping printer wakes",
+          "a printer comes out of standby without a full reboot",
+          "a short relay, fan, or motor response marks printer wake-up"
+        ]
+      },
+      "parameters": {
+        "depth": {
+          "default": "light",
+          "description": "Wake response depth; deep has more mechanical activity.",
+          "type": "enum",
+          "values": [
+            "light",
+            "deep"
+          ]
+        },
+        "seed": {
+          "description": "Optional non-negative deterministic variation seed. Reuse the same seed when reproducible output is required.",
+          "required": false,
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "renders": [
+    {
+      "analysis": {
+        "active_duration_s": 0.466,
+        "attack_duration_s": 0.229,
+        "band_energy_fraction": {
+          "0_250_hz": 0.001737788793853877,
+          "1k_5k_hz": 0.31067352496956446,
+          "250_1000_hz": 0.03275663459722679,
+          "5k_12k_hz": 0.6547322228631638
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": 0.5761138236231709,
+            "frequency_hz": 458.1540176520263,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 3649.0882261632673,
+            "level_db": -0.8334902520141643,
+            "relative_amplitude": 0.9085011625843257
+          },
+          {
+            "decay_s": 0.2719351550459042,
+            "frequency_hz": 5858.520364228464,
+            "level_db": -0.7474532043170383,
+            "relative_amplitude": 0.917544929932656
+          },
+          {
+            "decay_s": 0.27791697056458664,
+            "frequency_hz": 5871.733247096884,
+            "level_db": -0.6509260917515722,
+            "relative_amplitude": 0.9277985627360124
+          },
+          {
+            "decay_s": 0.2837176345703891,
+            "frequency_hz": 5884.947191899139,
+            "level_db": -0.6228824086068961,
+            "relative_amplitude": 0.9307989389972078
+          },
+          {
+            "decay_s": 0.28951001810505395,
+            "frequency_hz": 5898.16230224658,
+            "level_db": -0.6630548650717472,
+            "relative_amplitude": 0.9265039106249937
+          },
+          {
+            "decay_s": 0.2954735039405063,
+            "frequency_hz": 5911.3787135180155,
+            "level_db": -0.7720241125421089,
+            "relative_amplitude": 0.914953018754293
+          },
+          {
+            "decay_s": 0.24982873265651903,
+            "frequency_hz": 7012.0512460059845,
+            "level_db": -0.8423119166091647,
+            "relative_amplitude": 0.907578928436122
+          }
+        ],
+        "duration_s": 0.6708333333333333,
+        "envelope_peak_rms": 0.12570835459406213,
+        "envelope_rms_p10": 6.133743800036483e-06,
+        "envelope_rms_p90": 0.0024437519261351036,
+        "event_density_hz": 2.9813664596273295,
+        "onset_time_s": 0.0,
+        "peak": 0.4191962480545044,
+        "rms": 0.01667781108630051,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 6392.486836206885,
+        "spectral_centroid_trajectory_hz": [
+          816.8748959020413,
+          136.18235807570764,
+          6268.625756528607,
+          134.62873765456985,
+          131.72292132010324
+        ],
+        "spectral_flux": 0.11858725618781886,
+        "spectral_rolloff_85_hz": 10148.57142857143,
+        "zero_crossing_rate": 0.02695819616125225
+      },
+      "filename": "01-knock-oak-3.wav",
+      "pcm_sha256": "437fcb2d21d94b25d5c4c6f8310c4344904b44ff1423f907b66fb776eec8d16d",
+      "sample_count": 16100,
+      "uri": "sfx:impact.knock?material=oak&count=3&force=0.72&interval=0.23&seed=42"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 0.316,
+        "attack_duration_s": 0.304,
+        "band_energy_fraction": {
+          "0_250_hz": 0.030483829307156464,
+          "1k_5k_hz": 0.3842369419854585,
+          "250_1000_hz": 0.041948239130815926,
+          "5k_12k_hz": 0.5433309895765691
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": null,
+            "frequency_hz": 130.55225305094163,
+            "level_db": -6.876822365128379,
+            "relative_amplitude": 0.4530632976921734
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 144.00359752818994,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": 0.03619509515901514,
+            "frequency_hz": 660.4552867712756,
+            "level_db": -0.7117678232022646,
+            "relative_amplitude": 0.9213223546007379
+          },
+          {
+            "decay_s": 0.017965301610305576,
+            "frequency_hz": 1162.2570205657696,
+            "level_db": -5.909420344201045,
+            "relative_amplitude": 0.5064411459182384
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1787.1387167877078,
+            "level_db": -7.0945735121448354,
+            "relative_amplitude": 0.4418464035798172
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2402.7288305267803,
+            "level_db": -5.99536576884797,
+            "relative_amplitude": 0.5014547061945767
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 4065.0838606598168,
+            "level_db": -5.525493373698145,
+            "relative_amplitude": 0.5293285652034746
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 4979.910657491472,
+            "level_db": -3.9715691311772523,
+            "relative_amplitude": 0.6330259933973343
+          }
+        ],
+        "duration_s": 1.5592916666666667,
+        "envelope_peak_rms": 0.2648522454059293,
+        "envelope_rms_p10": 3.1785762497785724e-05,
+        "envelope_rms_p90": 0.003571078534727248,
+        "event_density_hz": 0.641316837239131,
+        "onset_time_s": 0.0,
+        "peak": 0.949999988079071,
+        "rms": 0.016174484633858104,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 6095.4819395088525,
+        "spectral_centroid_trajectory_hz": [
+          168.6802622242342,
+          135.54345760457292,
+          157.7198195973013,
+          131.9572968688771,
+          100.67715561968255
+        ],
+        "spectral_flux": 0.05196263837537689,
+        "spectral_rolloff_85_hz": 10545.172754723031,
+        "zero_crossing_rate": 0.015899738121960345
+      },
+      "filename": "02-knock-metal-2.wav",
+      "pcm_sha256": "bbb41b9498fc973210292be8e1fac9ae4d1fcf3a6afb967b588403cdb5a23df6",
+      "sample_count": 37423,
+      "uri": "sfx:impact.knock?material=metal&count=2&force=0.62&interval=0.30&seed=7"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 2.811,
+        "attack_duration_s": 1.18,
+        "band_energy_fraction": {
+          "0_250_hz": 0.17615851742848893,
+          "1k_5k_hz": 0.22452905012025806,
+          "250_1000_hz": 0.5874153411628098,
+          "5k_12k_hz": 0.011897003016280138
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": 0.09269506857781494,
+            "frequency_hz": 297.73850334087075,
+            "level_db": -2.3901218650077807,
+            "relative_amplitude": 0.7594407674663713
+          },
+          {
+            "decay_s": 0.08200371278211918,
+            "frequency_hz": 378.5950203866335,
+            "level_db": -2.029130448035059,
+            "relative_amplitude": 0.7916687052997929
+          },
+          {
+            "decay_s": 0.1319146936508263,
+            "frequency_hz": 450.82979214691494,
+            "level_db": -3.2794311456081204,
+            "relative_amplitude": 0.6855331217683699
+          },
+          {
+            "decay_s": 0.18274358967175303,
+            "frequency_hz": 467.7003013152608,
+            "level_db": -1.713639799108174,
+            "relative_amplitude": 0.8209524627836757
+          },
+          {
+            "decay_s": 0.2787320566604565,
+            "frequency_hz": 489.2334237751768,
+            "level_db": -0.6408503248471109,
+            "relative_amplitude": 0.9288754479620001
+          },
+          {
+            "decay_s": 0.4190306377875442,
+            "frequency_hz": 502.0386094023808,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": 0.5811731129060749,
+            "frequency_hz": 524.9300526682838,
+            "level_db": -1.6225831167428244,
+            "relative_amplitude": 0.8296040129749068
+          },
+          {
+            "decay_s": 0.24440552767807056,
+            "frequency_hz": 555.251157497583,
+            "level_db": -2.9378704123613186,
+            "relative_amplitude": 0.7130278273182619
+          }
+        ],
+        "duration_s": 2.8746666666666667,
+        "envelope_peak_rms": 0.09091903547546167,
+        "envelope_rms_p10": 2.8840603318374905e-06,
+        "envelope_rms_p90": 0.04221225055720364,
+        "event_density_hz": 6.261595547309833,
+        "onset_time_s": 0.0,
+        "peak": 0.23393413424491882,
+        "rms": 0.024492230624439927,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 830.5423606479662,
+        "spectral_centroid_trajectory_hz": [
+          830.9418104117583,
+          67.42221319542342,
+          684.4487285214869,
+          60.39181227736005,
+          963.9838306171041
+        ],
+        "spectral_flux": 0.20772408629801972,
+        "spectral_rolloff_85_hz": 1313.543599257885,
+        "zero_crossing_rate": 0.056572596425620736
+      },
+      "filename": "03-footsteps-wood-boots.wav",
+      "pcm_sha256": "12f77b10f617d2c6df83530d6a81345a4df6f93ffe76676349c77a769233cd7e",
+      "sample_count": 68992,
+      "uri": "sfx:footsteps.walk?surface=wood&footwear=boots&count=6&force=0.58&interval=0.52&seed=11"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 2.7039999999999997,
+        "attack_duration_s": 0.077,
+        "band_energy_fraction": {
+          "0_250_hz": 0.03390518517484095,
+          "1k_5k_hz": 0.4154424173389586,
+          "250_1000_hz": 0.35847892889249033,
+          "5k_12k_hz": 0.19217239823663165
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": 0.1359303097671806,
+            "frequency_hz": 241.0004354936537,
+            "level_db": -14.945588445691342,
+            "relative_amplitude": 0.17894541602477215
+          },
+          {
+            "decay_s": 0.1636200773940284,
+            "frequency_hz": 279.2737137127615,
+            "level_db": -12.495039470763501,
+            "relative_amplitude": 0.23727283888018696
+          },
+          {
+            "decay_s": 0.08154612440744781,
+            "frequency_hz": 644.8797653379914,
+            "level_db": -15.747715182543441,
+            "relative_amplitude": 0.1631602044609417
+          },
+          {
+            "decay_s": 0.08500874146065195,
+            "frequency_hz": 658.6301357402588,
+            "level_db": -11.14004839215676,
+            "relative_amplitude": 0.27733046535497674
+          },
+          {
+            "decay_s": 0.08852835001043083,
+            "frequency_hz": 671.3783573491451,
+            "level_db": -12.779522330167037,
+            "relative_amplitude": 0.22962749254594236
+          },
+          {
+            "decay_s": 0.09588819745114413,
+            "frequency_hz": 691.6215409348191,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": 0.10674249292693304,
+            "frequency_hz": 709.871452342433,
+            "level_db": -10.902829578357107,
+            "relative_amplitude": 0.28500896503958434
+          },
+          {
+            "decay_s": 0.09770585104865243,
+            "frequency_hz": 1387.446260850036,
+            "level_db": -14.443771880839947,
+            "relative_amplitude": 0.18958824482120804
+          }
+        ],
+        "duration_s": 2.7665,
+        "envelope_peak_rms": 0.06422438709699996,
+        "envelope_rms_p10": 3.5322842374745277e-06,
+        "envelope_rms_p90": 0.019995754394789393,
+        "event_density_hz": 5.422013374299656,
+        "onset_time_s": 0.0,
+        "peak": 0.20621225237846375,
+        "rms": 0.01309932016376932,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 2838.0962200138024,
+        "spectral_centroid_trajectory_hz": [
+          3490.7028200868604,
+          276.36315713784137,
+          1293.7404312576691,
+          276.6516648778968,
+          2581.173259236582
+        ],
+        "spectral_flux": 0.13700327489573144,
+        "spectral_rolloff_85_hz": 6336.887764323153,
+        "zero_crossing_rate": 0.12681677837186536
+      },
+      "filename": "04-footsteps-gravel-shoes.wav",
+      "pcm_sha256": "44da56895921dc0027e10030301558a2c6327a3add2038660e4c6a3a606b60ae",
+      "sample_count": 66396,
+      "uri": "sfx:footsteps.walk?surface=gravel&footwear=shoes&count=6&force=0.56&interval=0.50&seed=12"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 1.817,
+        "attack_duration_s": 0.108,
+        "band_energy_fraction": {
+          "0_250_hz": 1.2677357375193295e-06,
+          "1k_5k_hz": 4.492668241909341e-08,
+          "250_1000_hz": 0.9999986861261526,
+          "5k_12k_hz": 1.2113826805424238e-09
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": 14.591342922398177,
+            "frequency_hz": 415.803158832675,
+            "level_db": -17.043211390790052,
+            "relative_amplitude": 0.14055277692587317
+          },
+          {
+            "decay_s": 12.698797827185375,
+            "frequency_hz": 436.7652313842066,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": 11.646003361560407,
+            "frequency_hz": 458.446860575816,
+            "level_db": -14.971475978923364,
+            "relative_amplitude": 0.17841287887127852
+          },
+          {
+            "decay_s": 11.863791098858064,
+            "frequency_hz": 481.0975939399261,
+            "level_db": -4.245391324678761,
+            "relative_amplitude": 0.6133811617910205
+          },
+          {
+            "decay_s": 15.318976069265878,
+            "frequency_hz": 502.0598048421678,
+            "level_db": -21.26382635527408,
+            "relative_amplitude": 0.08645869623273698
+          }
+        ],
+        "duration_s": 1.82,
+        "envelope_peak_rms": 0.4302177187768714,
+        "envelope_rms_p10": 0.09756337333232125,
+        "envelope_rms_p90": 0.3606351872806178,
+        "event_density_hz": 12.637362637362637,
+        "onset_time_s": 0.0,
+        "peak": 0.606177031993866,
+        "rms": 0.19983137715329707,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 449.08370968399515,
+        "spectral_centroid_trajectory_hz": [
+          448.5533099565164,
+          448.9343840229491,
+          449.03899877385385,
+          0.0,
+          449.09176175596224
+        ],
+        "spectral_flux": 0.04745923691975917,
+        "spectral_rolloff_85_hz": 477.47252747252753,
+        "zero_crossing_rate": 0.0248403122782115
+      },
+      "filename": "05-phone-classic.wav",
+      "pcm_sha256": "d9fe08262cac2aada0d841939fb774d328ffafafe3e154e7556478719a8bdf78",
+      "sample_count": 43680,
+      "uri": "sfx:phone.ring?style=classic&count=2&interval=1.20&seed=21"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 1.799,
+        "attack_duration_s": 0.011,
+        "band_energy_fraction": {
+          "0_250_hz": 0.0003444473499483686,
+          "1k_5k_hz": 0.17325291624129,
+          "250_1000_hz": 0.8262718439783289,
+          "5k_12k_hz": 0.000130791769261424
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": 0.2134902399786665,
+            "frequency_hz": 846.7722122139942,
+            "level_db": -20.265945265487332,
+            "relative_amplitude": 0.09698459057138009
+          },
+          {
+            "decay_s": 0.20977067733392615,
+            "frequency_hz": 861.5416220960243,
+            "level_db": -14.77674487212232,
+            "relative_amplitude": 0.18245793543820038
+          },
+          {
+            "decay_s": 0.20732791738096726,
+            "frequency_hz": 883.6726935122061,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": 0.20833766184375285,
+            "frequency_hz": 905.8236401773204,
+            "level_db": -14.858745199274903,
+            "relative_amplitude": 0.1807435216964509
+          },
+          {
+            "decay_s": 0.2110268564407376,
+            "frequency_hz": 920.6148401820021,
+            "level_db": -20.386645314744896,
+            "relative_amplitude": 0.09564620307658206
+          },
+          {
+            "decay_s": 0.20034695269376818,
+            "frequency_hz": 1296.27317924809,
+            "level_db": -21.50898201674753,
+            "relative_amplitude": 0.08405255106258067
+          },
+          {
+            "decay_s": 0.20181057568573874,
+            "frequency_hz": 1318.3810425952836,
+            "level_db": -6.922431366495786,
+            "relative_amplitude": 0.45069052895322165
+          },
+          {
+            "decay_s": 0.20669869608816538,
+            "frequency_hz": 1340.462793357209,
+            "level_db": -21.96545478458001,
+            "relative_amplitude": 0.0797493699716469
+          }
+        ],
+        "duration_s": 1.86,
+        "envelope_peak_rms": 0.4907768060416618,
+        "envelope_rms_p10": 0.2151375259212858,
+        "envelope_rms_p90": 0.4809768731202401,
+        "event_density_hz": 5.913978494623656,
+        "onset_time_s": 0.0,
+        "peak": 0.8887099623680115,
+        "rms": 0.270480421851255,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 955.3444475796526,
+        "spectral_centroid_trajectory_hz": [
+          957.5024368294987,
+          954.5419916399273,
+          0.0,
+          953.71096102573,
+          964.0086118128024
+        ],
+        "spectral_flux": 0.1387274554837012,
+        "spectral_rolloff_85_hz": 1306.451612903226,
+        "zero_crossing_rate": 0.027733596182710187
+      },
+      "filename": "06-phone-electronic.wav",
+      "pcm_sha256": "dedcd0ed780b4b68b8905de97a20eeeedd5e48c77104af67b226ee23f8254207",
+      "sample_count": 44640,
+      "uri": "sfx:phone.ring?style=electronic&count=3&interval=0.72&seed=22"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 1.406,
+        "attack_duration_s": 0.042,
+        "band_energy_fraction": {
+          "0_250_hz": 0.0857145664549002,
+          "1k_5k_hz": 0.01539570152548555,
+          "250_1000_hz": 0.8988890093648331,
+          "5k_12k_hz": 7.226547592851155e-07
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": null,
+            "frequency_hz": 284.96395685969384,
+            "level_db": -1.9893456200324877,
+            "relative_amplitude": 0.7953031800484466
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 464.900558319103,
+            "level_db": -0.37380140737311773,
+            "relative_amplitude": 0.9578774064471854
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 489.243096315239,
+            "level_db": -1.3957665488177389,
+            "relative_amplitude": 0.8515529789544051
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 515.5433877745779,
+            "level_db": -2.2789508451903737,
+            "relative_amplitude": 0.7692233479415026
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 571.2659488987991,
+            "level_db": -2.2714474161998996,
+            "relative_amplitude": 0.7698881395470736
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 594.7346529591349,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 607.8338377075837,
+            "level_db": -1.4626626210287075,
+            "relative_amplitude": 0.8450197683825786
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 620.5746177373971,
+            "level_db": -1.8397325528325386,
+            "relative_amplitude": 0.8091208124281389
+          }
+        ],
+        "duration_s": 2.49,
+        "envelope_peak_rms": 0.1184351598796792,
+        "envelope_rms_p10": 6.474831522655395e-06,
+        "envelope_rms_p90": 0.006690975865626836,
+        "event_density_hz": 0.4016064257028112,
+        "onset_time_s": 0.0,
+        "peak": 0.37076643109321594,
+        "rms": 0.006749017215633253,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 441.96589254918854,
+        "spectral_centroid_trajectory_hz": [
+          795.6329093060185,
+          425.71889047807645,
+          429.3130984466077,
+          452.56051879362093,
+          198.5531501222676
+        ],
+        "spectral_flux": 0.14371655837099787,
+        "spectral_rolloff_85_hz": 522.0883534136547,
+        "zero_crossing_rate": 0.03768470021252029
+      },
+      "filename": "07-door-wood-slow.wav",
+      "pcm_sha256": "74878008e6a51869ecaabe338cd16d66cc9f7cf954cc3ce5240fd3df4dca680d",
+      "sample_count": 59760,
+      "uri": "sfx:door.open?material=wood&speed=slow&creak=0.72&seed=31"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 0.5640000000000001,
+        "attack_duration_s": 0.0,
+        "band_energy_fraction": {
+          "0_250_hz": 2.1119270287293858e-05,
+          "1k_5k_hz": 0.20602153106023405,
+          "250_1000_hz": 0.7894619459507985,
+          "5k_12k_hz": 0.004495232782282265
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": null,
+            "frequency_hz": 710.7913387441041,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 733.8709715266942,
+            "level_db": -18.754591233412626,
+            "relative_amplitude": 0.11541717452259202
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 756.8034945106297,
+            "level_db": -21.05670592738736,
+            "relative_amplitude": 0.08854513483849176
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1333.4165709724841,
+            "level_db": -14.968303472926724,
+            "relative_amplitude": 0.17847805576534884
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1357.6675891995276,
+            "level_db": -7.740034361669359,
+            "relative_amplitude": 0.41020248020869193
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1373.2140296778998,
+            "level_db": -17.855841207039536,
+            "relative_amplitude": 0.12799940169773338
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1391.8828014520875,
+            "level_db": -17.225911405716076,
+            "relative_amplitude": 0.13762724924266387
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2004.97915856523,
+            "level_db": -20.608442570851974,
+            "relative_amplitude": 0.0932347630559207
+          }
+        ],
+        "duration_s": 1.68,
+        "envelope_peak_rms": 0.7551896686533726,
+        "envelope_rms_p10": 5.527824156276833e-06,
+        "envelope_rms_p90": 0.08436497682494552,
+        "event_density_hz": 0.5952380952380952,
+        "onset_time_s": 0.0,
+        "peak": 0.949999988079071,
+        "rms": 0.07146589818635961,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 886.247323322195,
+        "spectral_centroid_trajectory_hz": [
+          6945.766069528834,
+          1061.7370514945987,
+          824.2268573547171,
+          709.2368628889229,
+          470.9477448624548
+        ],
+        "spectral_flux": 0.07058454860884077,
+        "spectral_rolloff_85_hz": 1353.5714285714287,
+        "zero_crossing_rate": 0.07071107914382797
+      },
+      "filename": "08-door-metal-fast.wav",
+      "pcm_sha256": "7d846d8fe388ff05303f395bd34c802368371615860754c80ad7fb503c2c4c92",
+      "sample_count": 40320,
+      "uri": "sfx:door.open?material=metal&speed=fast&creak=0.55&seed=32"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 0.46799999999999997,
+        "attack_duration_s": 0.45899999999999996,
+        "band_energy_fraction": {
+          "0_250_hz": 0.02279850681004858,
+          "1k_5k_hz": 0.311172864792482,
+          "250_1000_hz": 0.6502696289324611,
+          "5k_12k_hz": 0.015758999465008326
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": 8.096336358855549,
+            "frequency_hz": 384.30635609740705,
+            "level_db": -5.30206250832595,
+            "relative_amplitude": 0.5431213492741749
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 412.3571545560311,
+            "level_db": -4.751645835469209,
+            "relative_amplitude": 0.5786523327113076
+          },
+          {
+            "decay_s": 1.362134331692552,
+            "frequency_hz": 436.2454143588868,
+            "level_db": -5.872324570465224,
+            "relative_amplitude": 0.5086086844879697
+          },
+          {
+            "decay_s": 1.508342189945645,
+            "frequency_hz": 468.11060629045954,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": 1.501215553744039,
+            "frequency_hz": 486.1398486260851,
+            "level_db": -6.83077965914383,
+            "relative_amplitude": 0.45547130050897955
+          },
+          {
+            "decay_s": 1.5127142910150158,
+            "frequency_hz": 514.9414591737714,
+            "level_db": -7.921099097587464,
+            "relative_amplitude": 0.40173997214498075
+          },
+          {
+            "decay_s": 1.8668187073079652,
+            "frequency_hz": 581.4877626852176,
+            "level_db": -8.298184914293863,
+            "relative_amplitude": 0.3846721583818958
+          },
+          {
+            "decay_s": 20.0,
+            "frequency_hz": 601.5948019663566,
+            "level_db": -5.726289513739645,
+            "relative_amplitude": 0.517232164871221
+          }
+        ],
+        "duration_s": 0.7814583333333334,
+        "envelope_peak_rms": 0.10269995553315925,
+        "envelope_rms_p10": 1.1545379376695242e-05,
+        "envelope_rms_p90": 0.00992609782973522,
+        "event_density_hz": 1.2796587576646228,
+        "onset_time_s": 0.109,
+        "peak": 0.2365163266658783,
+        "rms": 0.009882830574834347,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 1142.445592947102,
+        "spectral_centroid_trajectory_hz": [
+          463.54666268121747,
+          472.5321631103201,
+          450.548939546841,
+          476.51281977322,
+          129.94309604899402
+        ],
+        "spectral_flux": 0.15132113018212434,
+        "spectral_rolloff_85_hz": 2033.3777659290859,
+        "zero_crossing_rate": 0.031459955209555295
+      },
+      "filename": "09-door-close-wood-normal.wav",
+      "pcm_sha256": "fe49963b6a42119a9c7988fc3d47c572511466639ed20b4f12db443b6f451cef",
+      "sample_count": 18755,
+      "uri": "sfx:door.close?material=wood&speed=normal&force=0.7&creak=0.2&seed=31"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 1.0959999999999999,
+        "attack_duration_s": 0.059,
+        "band_energy_fraction": {
+          "0_250_hz": 0.06599436118865347,
+          "1k_5k_hz": 0.44193619782864696,
+          "250_1000_hz": 0.07424823160950692,
+          "5k_12k_hz": 0.4178212093731927
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": 0.9654306949664733,
+            "frequency_hz": 90.98741061868117,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": 2.8026898651367227,
+            "frequency_hz": 182.0771505721626,
+            "level_db": -10.209471447697675,
+            "relative_amplitude": 0.30869274851632195
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1671.3263057255954,
+            "level_db": -11.24871103814207,
+            "relative_amplitude": 0.2738826038273602
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1932.9862836715545,
+            "level_db": -11.724089591387054,
+            "relative_amplitude": 0.2592958227974589
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2009.1863811911878,
+            "level_db": -12.298375198184035,
+            "relative_amplitude": 0.24270640646177422
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2272.2440671415047,
+            "level_db": -12.51665243367755,
+            "relative_amplitude": 0.23668317053325463
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 4084.8637506633627,
+            "level_db": -11.812501480486324,
+            "relative_amplitude": 0.25666989088369396
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 4350.37269950442,
+            "level_db": -11.811430767877455,
+            "relative_amplitude": 0.25670153261979617
+          }
+        ],
+        "duration_s": 1.3,
+        "envelope_peak_rms": 0.27196232139493826,
+        "envelope_rms_p10": 0.010122278815086786,
+        "envelope_rms_p90": 0.13086224088771203,
+        "event_density_hz": 5.384615384615384,
+        "onset_time_s": 0.062,
+        "peak": 0.49082791805267334,
+        "rms": 0.08895300305754737,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 4736.112599470003,
+        "spectral_centroid_trajectory_hz": [
+          458.4962422040163,
+          3977.2129096927565,
+          4891.4889535403945,
+          4947.682070733338,
+          1726.436212730769
+        ],
+        "spectral_flux": 0.17720323115280007,
+        "spectral_rolloff_85_hz": 8992.307692307691,
+        "zero_crossing_rate": 0.3139523702682778
+      },
+      "filename": "10-printer-print-1.wav",
+      "pcm_sha256": "3b701fcc5678ac6aeb54068ec316e1c27cb6358ab74defb80910d4489d6282b3",
+      "sample_count": 31200,
+      "uri": "sfx:printer.print?pages=1&speed=normal&seed=101"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 0.595,
+        "attack_duration_s": 0.246,
+        "band_energy_fraction": {
+          "0_250_hz": 0.04099042875585717,
+          "1k_5k_hz": 0.4525304442512737,
+          "250_1000_hz": 0.17234967640020282,
+          "5k_12k_hz": 0.3340910823922714
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": null,
+            "frequency_hz": 267.51248179839405,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 287.21158503124167,
+            "level_db": -0.31426245562417465,
+            "relative_amplitude": 0.9644659000841362
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 350.93741647465623,
+            "level_db": -1.4582627130474495,
+            "relative_amplitude": 0.8454479284480543
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 379.06485118059635,
+            "level_db": -1.8505167011826487,
+            "relative_amplitude": 0.8081168548942451
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 533.5123436510693,
+            "level_db": -2.1061175190272032,
+            "relative_amplitude": 0.7846827836185292
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 724.0556096076469,
+            "level_db": -1.2902568109709875,
+            "relative_amplitude": 0.8619600932241122
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1554.6571866140375,
+            "level_db": -1.4016192095399367,
+            "relative_amplitude": 0.8509793852101705
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1651.4434279660022,
+            "level_db": -0.53644941194114,
+            "relative_amplitude": 0.9401075259476313
+          }
+        ],
+        "duration_s": 0.74,
+        "envelope_peak_rms": 0.35970623537922813,
+        "envelope_rms_p10": 0.02876240460890943,
+        "envelope_rms_p90": 0.2944068602185098,
+        "event_density_hz": 2.7027027027027026,
+        "onset_time_s": 0.0,
+        "peak": 0.9108231067657471,
+        "rms": 0.16159077292442417,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 4022.0716387048446,
+        "spectral_centroid_trajectory_hz": [
+          770.1717547413274,
+          2966.948664903253,
+          3635.382472410418,
+          4113.620797668829,
+          0.0
+        ],
+        "spectral_flux": 0.16630353090197306,
+        "spectral_rolloff_85_hz": 8327.027027027027,
+        "zero_crossing_rate": 0.2247874317247593
+      },
+      "filename": "11-printer-tray-open.wav",
+      "pcm_sha256": "d1fc35fe7f996e49143ffc38c0cc99c36cce10ac0bf144890a672618e48fa08b",
+      "sample_count": 17760,
+      "uri": "sfx:printer.tray_open?speed=normal&paper_load=full&seed=102"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 0.20500000000000002,
+        "attack_duration_s": 0.001,
+        "band_energy_fraction": {
+          "0_250_hz": 0.7922451019670352,
+          "1k_5k_hz": 0.1150277918865451,
+          "250_1000_hz": 0.04859045931382216,
+          "5k_12k_hz": 0.044135287241835595
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": 0.07226079623957385,
+            "frequency_hz": 61.9789944304979,
+            "level_db": -9.091153030803447,
+            "relative_amplitude": 0.3511093125120497
+          },
+          {
+            "decay_s": 0.12598968938884614,
+            "frequency_hz": 84.62117691372454,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": 0.1767763113883795,
+            "frequency_hz": 119.26301187707935,
+            "level_db": -12.62948962887929,
+            "relative_amplitude": 0.2336283375035387
+          },
+          {
+            "decay_s": 0.20828975259706328,
+            "frequency_hz": 169.1692937665576,
+            "level_db": -6.310471601186381,
+            "relative_amplitude": 0.48358900707907904
+          },
+          {
+            "decay_s": 0.17587519494364343,
+            "frequency_hz": 185.47843569610194,
+            "level_db": -5.836835943953538,
+            "relative_amplitude": 0.5106909982710204
+          },
+          {
+            "decay_s": 0.17005860946443146,
+            "frequency_hz": 254.80185589910806,
+            "level_db": -11.704263027751537,
+            "relative_amplitude": 0.2598883720029085
+          },
+          {
+            "decay_s": 0.18039916628546673,
+            "frequency_hz": 314.1432008481491,
+            "level_db": -13.664753548174861,
+            "relative_amplitude": 0.20737782851024592
+          },
+          {
+            "decay_s": 0.18913216815297834,
+            "frequency_hz": 1436.7794672425455,
+            "level_db": -12.406893272344966,
+            "relative_amplitude": 0.23969299189247253
+          }
+        ],
+        "duration_s": 0.62,
+        "envelope_peak_rms": 0.27414817639358674,
+        "envelope_rms_p10": 0.0029888134058769678,
+        "envelope_rms_p90": 0.07538715043393053,
+        "event_density_hz": 1.6129032258064517,
+        "onset_time_s": 0.0,
+        "peak": 0.4486055076122284,
+        "rms": 0.054322027658794736,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 672.1800214254278,
+        "spectral_centroid_trajectory_hz": [
+          476.82491183233606,
+          625.160065945684,
+          1213.6330763612996,
+          2338.541765451194,
+          3059.3491016383973
+        ],
+        "spectral_flux": 0.1920337204917029,
+        "spectral_rolloff_85_hz": 1179.0322580645163,
+        "zero_crossing_rate": 0.2193695812890651
+      },
+      "filename": "12-printer-power-off.wav",
+      "pcm_sha256": "0e45bf440cb8023b5e502210de915e71ef137f5700b726f8e2e38ab876ca5953",
+      "sample_count": 14880,
+      "uri": "sfx:printer.power_switch?state=off&seed=103"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 2.522,
+        "attack_duration_s": 0.001,
+        "band_energy_fraction": {
+          "0_250_hz": 0.4724173693851462,
+          "1k_5k_hz": 0.2863079958378282,
+          "250_1000_hz": 0.10829038372733141,
+          "5k_12k_hz": 0.1329686951576463
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": null,
+            "frequency_hz": 104.71123711449177,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 209.18325961964732,
+            "level_db": -7.86769049026621,
+            "relative_amplitude": 0.4042178385697358
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 316.2663682619956,
+            "level_db": -11.493218383812085,
+            "relative_amplitude": 0.2662803265114295
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 425.83410929348236,
+            "level_db": -15.4909077655897,
+            "relative_amplitude": 0.1680562280335144
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 487.69978879462815,
+            "level_db": -15.390513114933755,
+            "relative_amplitude": 0.17000995180790263
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 909.4984216618809,
+            "level_db": -15.553600010741969,
+            "relative_amplitude": 0.16684761363299916
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1110.096408296214,
+            "level_db": -15.97223702638344,
+            "relative_amplitude": 0.15899671395329124
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1485.5866324288154,
+            "level_db": -15.537717452242205,
+            "relative_amplitude": 0.16715298146136826
+          }
+        ],
+        "duration_s": 2.8,
+        "envelope_peak_rms": 0.226927739975773,
+        "envelope_rms_p10": 0.008442557969665223,
+        "envelope_rms_p90": 0.05769927506828952,
+        "event_density_hz": 4.642857142857143,
+        "onset_time_s": 0.0,
+        "peak": 0.4270901679992676,
+        "rms": 0.039066380189229186,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 1873.5534709961962,
+        "spectral_centroid_trajectory_hz": [
+          49.22220160625205,
+          2162.0481774713016,
+          1841.5225064678257,
+          1857.846069607796,
+          1590.2750725224575
+        ],
+        "spectral_flux": 0.14374750415213416,
+        "spectral_rolloff_85_hz": 4530.357142857143,
+        "zero_crossing_rate": 0.19601482164913167
+      },
+      "filename": "13-printer-restart.wav",
+      "pcm_sha256": "04f557e698663dbc05b35b90f891c70dbeda80c1fe7c3f6bb8371219bc1d6529",
+      "sample_count": 67200,
+      "uri": "sfx:printer.restart?speed=normal&seed=104"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 1.599,
+        "attack_duration_s": 0.221,
+        "band_energy_fraction": {
+          "0_250_hz": 0.0033597463165368673,
+          "1k_5k_hz": 0.46039117058102463,
+          "250_1000_hz": 0.06235280372676868,
+          "5k_12k_hz": 0.47388736631272455
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": null,
+            "frequency_hz": 1336.6732172860322,
+            "level_db": -1.4426905674824884,
+            "relative_amplitude": 0.846965015053539
+          },
+          {
+            "decay_s": 10.392044355942947,
+            "frequency_hz": 1648.9828992812875,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2209.075458618992,
+            "level_db": -1.0446051405488328,
+            "relative_amplitude": 0.8866857786533243
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2401.11491023075,
+            "level_db": -1.6530424315744785,
+            "relative_amplitude": 0.826699887297655
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 3087.1035373548366,
+            "level_db": -0.44126788135466066,
+            "relative_amplitude": 0.9504660437777527
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 3782.601229772706,
+            "level_db": -1.0703997672883545,
+            "relative_amplitude": 0.8840564796442772
+          },
+          {
+            "decay_s": 1.6743439630676118,
+            "frequency_hz": 4329.920906309285,
+            "level_db": -1.664548244920929,
+            "relative_amplitude": 0.8256055195578569
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 6506.406057510851,
+            "level_db": -1.3512244142327978,
+            "relative_amplitude": 0.8559310461268804
+          }
+        ],
+        "duration_s": 1.6,
+        "envelope_peak_rms": 0.09359994850634451,
+        "envelope_rms_p10": 0.013902563136330995,
+        "envelope_rms_p90": 0.0705879290554924,
+        "event_density_hz": 5.0,
+        "onset_time_s": 0.003,
+        "peak": 0.2589185833930969,
+        "rms": 0.04236370471497798,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 5302.234939108129,
+        "spectral_centroid_trajectory_hz": [
+          5596.220511610366,
+          5483.113754605593,
+          5367.871773753863,
+          5271.939701674037,
+          5318.98571078674
+        ],
+        "spectral_flux": 0.2066931243179248,
+        "spectral_rolloff_85_hz": 9533.75,
+        "zero_crossing_rate": 0.42959452069064297
+      },
+      "filename": "14-pen-write.wav",
+      "pcm_sha256": "e97ac5e3996ce80a12de061da83c39beebaf55426c5030b4297bf4636af234de",
+      "sample_count": 38400,
+      "uri": "sfx:pen.write?duration=1.6&speed=normal&pressure=0.55&seed=105"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 0.588,
+        "attack_duration_s": 0.0,
+        "band_energy_fraction": {
+          "0_250_hz": 0.48278896476319505,
+          "1k_5k_hz": 0.2842150229194388,
+          "250_1000_hz": 0.1204830260934667,
+          "5k_12k_hz": 0.11248874802950588
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": 2.439525876860044,
+            "frequency_hz": 75.90849975770301,
+            "level_db": -16.052909684864474,
+            "relative_amplitude": 0.15752682354777114
+          },
+          {
+            "decay_s": 0.731779758182173,
+            "frequency_hz": 93.48517854567203,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": 1.2317065435375594,
+            "frequency_hz": 187.77686616701752,
+            "level_db": -5.939729935737522,
+            "relative_amplitude": 0.5046769888865394
+          },
+          {
+            "decay_s": 3.1633529985693607,
+            "frequency_hz": 279.9143401349341,
+            "level_db": -15.345775598582783,
+            "relative_amplitude": 0.17088786348452473
+          },
+          {
+            "decay_s": 1.9535605844851902,
+            "frequency_hz": 645.1931450431863,
+            "level_db": -14.91939065419233,
+            "relative_amplitude": 0.17948595381459653
+          },
+          {
+            "decay_s": 4.508694689123919,
+            "frequency_hz": 689.3980929954646,
+            "level_db": -16.95051378332623,
+            "relative_amplitude": 0.1420608179282351
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 939.5722937639024,
+            "level_db": -17.297847637839162,
+            "relative_amplitude": 0.13649213219866915
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1183.8266382328218,
+            "level_db": -16.510225491106485,
+            "relative_amplitude": 0.1494475244354419
+          }
+        ],
+        "duration_s": 0.7,
+        "envelope_peak_rms": 0.15797605339416068,
+        "envelope_rms_p10": 0.007011802761162642,
+        "envelope_rms_p90": 0.04887991200626128,
+        "event_density_hz": 4.285714285714286,
+        "onset_time_s": 0.0,
+        "peak": 0.2997647821903229,
+        "rms": 0.03410636550871301,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 1734.211736273322,
+        "spectral_centroid_trajectory_hz": [
+          45.724198354297926,
+          2880.184979432297,
+          1930.364215331077,
+          2078.090907316575,
+          2569.089411792775
+        ],
+        "spectral_flux": 0.1790781933197223,
+        "spectral_rolloff_85_hz": 3917.1428571428573,
+        "zero_crossing_rate": 0.2067384963390678
+      },
+      "filename": "15-printer-wake.wav",
+      "pcm_sha256": "9b0f3b5e713aa47da20c08902084eed4ed21cf5b500c0a33d2c466f72e9992f2",
+      "sample_count": 16800,
+      "uri": "sfx:printer.wake?depth=light&seed=106"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 1.1089999999999998,
+        "attack_duration_s": 0.055999999999999994,
+        "band_energy_fraction": {
+          "0_250_hz": 0.07017364302372965,
+          "1k_5k_hz": 0.44919480298722303,
+          "250_1000_hz": 0.07485415728578153,
+          "5k_12k_hz": 0.4057773967032658
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": 1.0952503003189913,
+            "frequency_hz": 105.28584165862979,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 210.31632514929254,
+            "level_db": -8.535569659391815,
+            "relative_amplitude": 0.37430145646977125
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1083.1367941969536,
+            "level_db": -12.968127324815049,
+            "relative_amplitude": 0.22469511657661528
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1131.6824534469529,
+            "level_db": -12.291649552508705,
+            "relative_amplitude": 0.24289441131867154
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2468.7188243476608,
+            "level_db": -12.251557084667306,
+            "relative_amplitude": 0.24401815872449145
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2628.080614525197,
+            "level_db": -12.388695270590365,
+            "relative_amplitude": 0.24019570448197364
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 3310.7761793642953,
+            "level_db": -12.852137850012202,
+            "relative_amplitude": 0.22771576981513503
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 4106.439454700058,
+            "level_db": -12.63105365933175,
+            "relative_amplitude": 0.23358627285000846
+          }
+        ],
+        "duration_s": 1.3,
+        "envelope_peak_rms": 0.2471043867557042,
+        "envelope_rms_p10": 0.010082856552929731,
+        "envelope_rms_p90": 0.12951769032936145,
+        "event_density_hz": 3.0769230769230766,
+        "onset_time_s": 0.064,
+        "peak": 0.5100681781768799,
+        "rms": 0.0882836344287772,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 4632.717555763049,
+        "spectral_centroid_trajectory_hz": [
+          444.6480895059694,
+          4272.694932897554,
+          4651.1307692208475,
+          4585.749305922152,
+          1837.90622425702
+        ],
+        "spectral_flux": 0.1772753743189992,
+        "spectral_rolloff_85_hz": 8906.153846153846,
+        "zero_crossing_rate": 0.3088560530786243
+      },
+      "filename": "01-printer-print-one-normal.wav",
+      "pcm_sha256": "b855486791e099e62e69fc6d49de4f53786e4a7f13ad522f2cf7b5194e2a0b78",
+      "sample_count": 31200,
+      "uri": "sfx:printer.print?pages=1&speed=normal&seed=501"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 2.694,
+        "attack_duration_s": 0.87,
+        "band_energy_fraction": {
+          "0_250_hz": 0.22890469496112262,
+          "1k_5k_hz": 0.3641446032968087,
+          "250_1000_hz": 0.0627404171328144,
+          "5k_12k_hz": 0.3441930913325988
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": 1.5780449986742044,
+            "frequency_hz": 77.01852696627236,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": 1.127113007561612,
+            "frequency_hz": 153.8259661201135,
+            "level_db": -8.14743639879514,
+            "relative_amplitude": 0.3914066319851545
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1114.2911108063804,
+            "level_db": -12.063669882366865,
+            "relative_amplitude": 0.24935409563058664
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1151.4083682049868,
+            "level_db": -11.495781487966607,
+            "relative_amplitude": 0.266201761902622
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1447.6796826845,
+            "level_db": -12.343715745895445,
+            "relative_amplitude": 0.24144277428946884
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2025.4926938402073,
+            "level_db": -11.668737096347533,
+            "relative_amplitude": 0.26095351144168993
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2202.9949364534905,
+            "level_db": -11.819548884035825,
+            "relative_amplitude": 0.25646172306728005
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2903.5002428462526,
+            "level_db": -12.136340220060298,
+            "relative_amplitude": 0.2472765819828482
+          }
+        ],
+        "duration_s": 2.94,
+        "envelope_peak_rms": 0.3059843369384854,
+        "envelope_rms_p10": 0.021303606360903313,
+        "envelope_rms_p90": 0.13875234962623312,
+        "event_density_hz": 7.482993197278912,
+        "onset_time_s": 0.073,
+        "peak": 0.5437315702438354,
+        "rms": 0.10309363009808166,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 3898.689037439332,
+        "spectral_centroid_trajectory_hz": [
+          367.21835083990965,
+          5053.72456810005,
+          4904.444343687015,
+          4881.265494232233,
+          1547.0667842912023
+        ],
+        "spectral_flux": 0.18754849146034758,
+        "spectral_rolloff_85_hz": 8453.401360544218,
+        "zero_crossing_rate": 0.3516064570076107
+      },
+      "filename": "02-printer-print-three-normal.wav",
+      "pcm_sha256": "d27047fbe619c9e943fd8311a7fa71be32c2b6a8cd1f826cbae4a40e0190be6f",
+      "sample_count": 70560,
+      "uri": "sfx:printer.print?pages=3&speed=normal&seed=502"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 0.8889999999999999,
+        "attack_duration_s": 0.06,
+        "band_energy_fraction": {
+          "0_250_hz": 0.08780738829698712,
+          "1k_5k_hz": 0.43614022989389745,
+          "250_1000_hz": 0.06993085763867495,
+          "5k_12k_hz": 0.4061215241704406
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": 1.0692590841187226,
+            "frequency_hz": 95.31843351587682,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": 1.3660288681501425,
+            "frequency_hz": 190.5023277528124,
+            "level_db": -7.342568937799056,
+            "relative_amplitude": 0.4294094059015825
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1234.7516573432092,
+            "level_db": -10.333366434332545,
+            "relative_amplitude": 0.3043208289743337
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1403.6864846565477,
+            "level_db": -10.862629443914747,
+            "relative_amplitude": 0.28633110402288503
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2376.7901652118803,
+            "level_db": -12.11479025640945,
+            "relative_amplitude": 0.24789084459812674
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2540.530742350129,
+            "level_db": -12.04855140706676,
+            "relative_amplitude": 0.2497884940239683
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2750.6450223435468,
+            "level_db": -11.836642952905017,
+            "relative_amplitude": 0.2559574956966092
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 3642.680861906823,
+            "level_db": -12.533880454714428,
+            "relative_amplitude": 0.23621418673954261
+          }
+        ],
+        "duration_s": 1.08,
+        "envelope_peak_rms": 0.24637395857453537,
+        "envelope_rms_p10": 0.0072381784574633585,
+        "envelope_rms_p90": 0.13218263140006,
+        "event_density_hz": 2.7777777777777777,
+        "onset_time_s": 0.06,
+        "peak": 0.614030659198761,
+        "rms": 0.08853093644251371,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 4582.937731632636,
+        "spectral_centroid_trajectory_hz": [
+          483.7626653521964,
+          2772.4619995253133,
+          4670.224379964205,
+          4878.305471359742,
+          1976.5102504384881
+        ],
+        "spectral_flux": 0.17280124016807208,
+        "spectral_rolloff_85_hz": 8857.407407407407,
+        "zero_crossing_rate": 0.3079594120143524
+      },
+      "filename": "03-printer-print-one-fast.wav",
+      "pcm_sha256": "9773f482c97660aa3d2ced0fd58843d189113dee6ed3a9a1bcbd679dbc7bc773",
+      "sample_count": 25920,
+      "uri": "sfx:printer.print?pages=1&speed=fast&seed=503"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 0.592,
+        "attack_duration_s": 0.247,
+        "band_energy_fraction": {
+          "0_250_hz": 0.04579137707300834,
+          "1k_5k_hz": 0.45847928926293935,
+          "250_1000_hz": 0.1686728899687652,
+          "5k_12k_hz": 0.32693467138713733
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": null,
+            "frequency_hz": 338.50521486309856,
+            "level_db": -3.9310335556418794,
+            "relative_amplitude": 0.635987122642774
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 412.18787037501517,
+            "level_db": -3.4499303352382964,
+            "relative_amplitude": 0.6722077004996027
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 462.8471176344953,
+            "level_db": -3.367112857293106,
+            "relative_amplitude": 0.6786476618217148
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 572.5653379639203,
+            "level_db": -3.6165017768132217,
+            "relative_amplitude": 0.6594394295670626
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 693.7428962198904,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 925.0173009788506,
+            "level_db": -3.4215070162379617,
+            "relative_amplitude": 0.6744110061199609
+          },
+          {
+            "decay_s": 10.6808591596962,
+            "frequency_hz": 1343.4285826912487,
+            "level_db": -4.385551808570761,
+            "relative_amplitude": 0.6035627235032156
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1468.6104054860089,
+            "level_db": -3.512872634998395,
+            "relative_amplitude": 0.667354154210139
+          }
+        ],
+        "duration_s": 0.74,
+        "envelope_peak_rms": 0.3907797518754009,
+        "envelope_rms_p10": 0.029115446167739978,
+        "envelope_rms_p90": 0.2972254405458419,
+        "event_density_hz": 4.054054054054054,
+        "onset_time_s": 0.0,
+        "peak": 0.9046635627746582,
+        "rms": 0.16378672730338617,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 3986.055994292658,
+        "spectral_centroid_trajectory_hz": [
+          761.5898792006366,
+          3193.256514488947,
+          3546.6328292791636,
+          4180.3775964939205,
+          0.0
+        ],
+        "spectral_flux": 0.16818001924137194,
+        "spectral_rolloff_85_hz": 8212.162162162162,
+        "zero_crossing_rate": 0.2247874317247593
+      },
+      "filename": "04-printer-tray-open-full.wav",
+      "pcm_sha256": "f2d5e57385c7cf0f665a556a52cade1fedf8d78b12ad7d562aadecd6cb4982e7",
+      "sample_count": 17760,
+      "uri": "sfx:printer.tray_open?speed=normal&paper_load=full&seed=504"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 0.603,
+        "attack_duration_s": 0.332,
+        "band_energy_fraction": {
+          "0_250_hz": 0.06579365007484717,
+          "1k_5k_hz": 0.45654493205869046,
+          "250_1000_hz": 0.2636817848990003,
+          "5k_12k_hz": 0.21397390856948906
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": null,
+            "frequency_hz": 289.05915752555,
+            "level_db": -0.08581574890228331,
+            "relative_amplitude": 0.9901687426979475
+          },
+          {
+            "decay_s": 20.0,
+            "frequency_hz": 353.9247585871481,
+            "level_db": -2.134458933133085,
+            "relative_amplitude": 0.7821265944507219
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 374.89656120405283,
+            "level_db": -2.208325093146411,
+            "relative_amplitude": 0.7755034698796527
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 449.21107247100906,
+            "level_db": -0.4382734243008044,
+            "relative_amplitude": 0.9507937730634447
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 495.968896554202,
+            "level_db": -0.9819651303632339,
+            "relative_amplitude": 0.8931034015935828
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 634.8283198317891,
+            "level_db": -2.314583948427212,
+            "relative_amplitude": 0.7660741404649398
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 839.6158381617394,
+            "level_db": -0.8162403645506499,
+            "relative_amplitude": 0.9103072084076566
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 980.7315316806737,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          }
+        ],
+        "duration_s": 0.74,
+        "envelope_peak_rms": 0.25232316414581396,
+        "envelope_rms_p10": 0.028533889665083943,
+        "envelope_rms_p90": 0.19791980420924493,
+        "event_density_hz": 2.7027027027027026,
+        "onset_time_s": 0.0,
+        "peak": 0.7040520310401917,
+        "rms": 0.12111773174298249,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 2996.669915295163,
+        "spectral_centroid_trajectory_hz": [
+          744.1300276703457,
+          3144.4062101837085,
+          3041.5888030730725,
+          3232.199862007792,
+          0.0
+        ],
+        "spectral_flux": 0.17305446914814593,
+        "spectral_rolloff_85_hz": 6567.5675675675675,
+        "zero_crossing_rate": 0.20947125401205022
+      },
+      "filename": "05-printer-tray-open-empty.wav",
+      "pcm_sha256": "fe97839e25067628b573ca53ef6b6f46f1b13f1d3988881511e44f4d689eae36",
+      "sample_count": 17760,
+      "uri": "sfx:printer.tray_open?speed=normal&paper_load=empty&seed=505"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 0.20400000000000001,
+        "attack_duration_s": 0.0,
+        "band_energy_fraction": {
+          "0_250_hz": 0.7886538674279946,
+          "1k_5k_hz": 0.12272847342590587,
+          "250_1000_hz": 0.04021028995324462,
+          "5k_12k_hz": 0.04840514990841252
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": 0.08119538577404739,
+            "frequency_hz": 63.05349527622246,
+            "level_db": -8.466050680995652,
+            "relative_amplitude": 0.3773092618032642
+          },
+          {
+            "decay_s": 0.11000848422796816,
+            "frequency_hz": 87.26382765226792,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": 0.14040048524299556,
+            "frequency_hz": 104.13620660105158,
+            "level_db": -12.472939135022454,
+            "relative_amplitude": 0.23787732344579612
+          },
+          {
+            "decay_s": 0.18055942788241872,
+            "frequency_hz": 129.93250237729006,
+            "level_db": -13.08144653141968,
+            "relative_amplitude": 0.22178270363771987
+          },
+          {
+            "decay_s": 0.2099777167100848,
+            "frequency_hz": 181.41483771292067,
+            "level_db": -8.90966373113502,
+            "relative_amplitude": 0.3585228279982403
+          },
+          {
+            "decay_s": 0.19547630818033018,
+            "frequency_hz": 310.38966802428297,
+            "level_db": -10.528709969671464,
+            "relative_amplitude": 0.29755311526367384
+          },
+          {
+            "decay_s": 0.2360750328413433,
+            "frequency_hz": 541.7346477740454,
+            "level_db": -12.999800851437337,
+            "relative_amplitude": 0.22387724681645713
+          },
+          {
+            "decay_s": 0.21323687228137447,
+            "frequency_hz": 1847.8902572497277,
+            "level_db": -13.235875011168176,
+            "relative_amplitude": 0.21787442273431576
+          }
+        ],
+        "duration_s": 0.62,
+        "envelope_peak_rms": 0.27126363085789307,
+        "envelope_rms_p10": 0.003081086892323681,
+        "envelope_rms_p90": 0.07156592085062562,
+        "event_density_hz": 1.6129032258064517,
+        "onset_time_s": 0.0,
+        "peak": 0.49104276299476624,
+        "rms": 0.054399069094445224,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 722.225027051488,
+        "spectral_centroid_trajectory_hz": [
+          458.94243512004186,
+          731.725100476246,
+          1233.3271463176932,
+          2525.2657836763633,
+          2595.865003446723
+        ],
+        "spectral_flux": 0.18661072223189482,
+        "spectral_rolloff_85_hz": 1361.2903225806454,
+        "zero_crossing_rate": 0.2222595604543316
+      },
+      "filename": "06-printer-power-off.wav",
+      "pcm_sha256": "fbae14fd5d74ffd27a7642ed208d89ab04307cd1a84d35e16b51ed1f6bd03389",
+      "sample_count": 14880,
+      "uri": "sfx:printer.power_switch?state=off&seed=506"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 0.28300000000000003,
+        "attack_duration_s": 0.001,
+        "band_energy_fraction": {
+          "0_250_hz": 0.8382841859580984,
+          "1k_5k_hz": 0.08737864605365342,
+          "250_1000_hz": 0.0372137685952206,
+          "5k_12k_hz": 0.0371177615641473
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": 0.06871790820634367,
+            "frequency_hz": 60.663283855422215,
+            "level_db": -8.157080471025445,
+            "relative_amplitude": 0.3909722885637841
+          },
+          {
+            "decay_s": 0.07933906754933781,
+            "frequency_hz": 77.14665641289557,
+            "level_db": -9.544788081723633,
+            "relative_amplitude": 0.3332426626772906
+          },
+          {
+            "decay_s": 0.1241415219212085,
+            "frequency_hz": 110.75206381419925,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": 0.25354354492816067,
+            "frequency_hz": 170.5205270826833,
+            "level_db": -8.799850202725334,
+            "relative_amplitude": 0.3630843164858673
+          },
+          {
+            "decay_s": 0.17619392952528906,
+            "frequency_hz": 185.9178965983325,
+            "level_db": -8.84893369004931,
+            "relative_amplitude": 0.3610383331844772
+          },
+          {
+            "decay_s": 0.17404796903158365,
+            "frequency_hz": 223.91126723420578,
+            "level_db": -7.588011040197439,
+            "relative_amplitude": 0.41744517723238544
+          },
+          {
+            "decay_s": 0.18475204535223014,
+            "frequency_hz": 317.9087973011045,
+            "level_db": -9.499919709401386,
+            "relative_amplitude": 0.33496853552458455
+          },
+          {
+            "decay_s": 0.2840328774993448,
+            "frequency_hz": 537.1670451552527,
+            "level_db": -11.592586751785392,
+            "relative_amplitude": 0.2632513835858747
+          }
+        ],
+        "duration_s": 0.4,
+        "envelope_peak_rms": 0.2593980732776857,
+        "envelope_rms_p10": 0.005676990435474127,
+        "envelope_rms_p90": 0.10270927424612852,
+        "event_density_hz": 2.5,
+        "onset_time_s": 0.0,
+        "peak": 0.4312736690044403,
+        "rms": 0.062404994232686264,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 553.6481726477998,
+        "spectral_centroid_trajectory_hz": [
+          53.18948852364236,
+          280.2924538708066,
+          75.94226946996012,
+          2344.462793988268,
+          2849.064188781264
+        ],
+        "spectral_flux": 0.13939174543889196,
+        "spectral_rolloff_85_hz": 472.5,
+        "zero_crossing_rate": 0.15439108240441712
+      },
+      "filename": "07-printer-power-on.wav",
+      "pcm_sha256": "e8327277fe1474a0ffc7c073a07e53cdaa86eff0539a7780c576865765e3b3cc",
+      "sample_count": 9600,
+      "uri": "sfx:printer.power_switch?state=on&seed=507"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 2.5229999999999997,
+        "attack_duration_s": 0.0,
+        "band_energy_fraction": {
+          "0_250_hz": 0.47197653828418906,
+          "1k_5k_hz": 0.2817839195384076,
+          "250_1000_hz": 0.11911685895733619,
+          "5k_12k_hz": 0.1271215756605316
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": null,
+            "frequency_hz": 101.53353558999551,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 204.54812752278133,
+            "level_db": -9.248427687116212,
+            "relative_amplitude": 0.3448090179803161
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 266.71470767947255,
+            "level_db": -14.747159038029933,
+            "relative_amplitude": 0.18308048240685845
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 305.99068887035395,
+            "level_db": -14.750630838627078,
+            "relative_amplitude": 0.1830073186963741
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 389.4242752772164,
+            "level_db": -16.02192875479154,
+            "relative_amplitude": 0.15808969524771216
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 408.0743197629321,
+            "level_db": -15.856035827625213,
+            "relative_amplitude": 0.16113808890698567
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 726.7439152317882,
+            "level_db": -15.064984604804398,
+            "relative_amplitude": 0.17650246285377835
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1243.7854646881995,
+            "level_db": -15.091879176217633,
+            "relative_amplitude": 0.17595679433366998
+          }
+        ],
+        "duration_s": 2.8,
+        "envelope_peak_rms": 0.21938982329908902,
+        "envelope_rms_p10": 0.00829939223495416,
+        "envelope_rms_p90": 0.05659424837188111,
+        "event_density_hz": 4.642857142857143,
+        "onset_time_s": 0.0,
+        "peak": 0.3868464529514313,
+        "rms": 0.038580521764737405,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 1815.7642303611897,
+        "spectral_centroid_trajectory_hz": [
+          49.75817054667238,
+          2037.0660296036597,
+          2834.274724835812,
+          1783.0156847618055,
+          1210.5609394946257
+        ],
+        "spectral_flux": 0.14160209349625666,
+        "spectral_rolloff_85_hz": 4348.571428571428,
+        "zero_crossing_rate": 0.19597017812765072
+      },
+      "filename": "08-printer-restart-normal.wav",
+      "pcm_sha256": "8e6412bd4cfd6c23be196c6bf7934bff2b0671e7012b953f8615473041f3f784",
+      "sample_count": 67200,
+      "uri": "sfx:printer.restart?speed=normal&seed=508"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 0.59,
+        "attack_duration_s": 0.001,
+        "band_energy_fraction": {
+          "0_250_hz": 0.4605236180249765,
+          "1k_5k_hz": 0.2799113018013605,
+          "250_1000_hz": 0.1315090921774598,
+          "5k_12k_hz": 0.1280155633591064
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": null,
+            "frequency_hz": 89.62367279616612,
+            "level_db": -14.204465006170746,
+            "relative_amplitude": 0.19488425341980997
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 102.9309081491061,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": 1.2821246795559031,
+            "frequency_hz": 206.76137536616682,
+            "level_db": -8.221264317251523,
+            "relative_amplitude": 0.388093870972904
+          },
+          {
+            "decay_s": 1.0031039419959484,
+            "frequency_hz": 310.46877515658485,
+            "level_db": -12.267910315375545,
+            "relative_amplitude": 0.24355916934568292
+          },
+          {
+            "decay_s": 18.355782875356816,
+            "frequency_hz": 415.0648076775706,
+            "level_db": -16.50399533779253,
+            "relative_amplitude": 0.1495547575489019
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 755.6185272510444,
+            "level_db": -18.1029860439004,
+            "relative_amplitude": 0.12440868448162179
+          },
+          {
+            "decay_s": 0.8011519662488232,
+            "frequency_hz": 945.5157462270737,
+            "level_db": -17.599679128994133,
+            "relative_amplitude": 0.13183054380214465
+          },
+          {
+            "decay_s": 0.8314975006253894,
+            "frequency_hz": 1673.929060765686,
+            "level_db": -18.331722152648187,
+            "relative_amplitude": 0.12117524106225566
+          }
+        ],
+        "duration_s": 0.7,
+        "envelope_peak_rms": 0.16038762028313439,
+        "envelope_rms_p10": 0.00672545573211612,
+        "envelope_rms_p90": 0.046192330388976216,
+        "event_density_hz": 4.285714285714286,
+        "onset_time_s": 0.0,
+        "peak": 0.2952653765678406,
+        "rms": 0.0338777224186634,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 1844.9457169908783,
+        "spectral_centroid_trajectory_hz": [
+          41.45024937012914,
+          2781.429687367926,
+          2017.9068808934167,
+          2137.531349133209,
+          2760.0008406178517
+        ],
+        "spectral_flux": 0.18178579585578186,
+        "spectral_rolloff_85_hz": 4305.714285714286,
+        "zero_crossing_rate": 0.19655931900708376
+      },
+      "filename": "09-printer-wake-light.wav",
+      "pcm_sha256": "ae932c0925f9c11584a1a8f809e898f0e90ed924850435721c255b10ce9f3450",
+      "sample_count": 16800,
+      "uri": "sfx:printer.wake?depth=light&seed=509"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 1.5999999999999999,
+        "attack_duration_s": 0.165,
+        "band_energy_fraction": {
+          "0_250_hz": 0.004540084578258964,
+          "1k_5k_hz": 0.4432150011911057,
+          "250_1000_hz": 0.06616683484002703,
+          "5k_12k_hz": 0.48606727979828207
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": 1.847953344090673,
+            "frequency_hz": 879.0527446143221,
+            "level_db": -0.7195399416752736,
+            "relative_amplitude": 0.92049832573467
+          },
+          {
+            "decay_s": 0.8828438880081576,
+            "frequency_hz": 1317.3455995138181,
+            "level_db": -0.4317902491166515,
+            "relative_amplitude": 0.9515037134264137
+          },
+          {
+            "decay_s": 0.7313898134473027,
+            "frequency_hz": 1400.5393398254453,
+            "level_db": -0.8107139144131438,
+            "relative_amplitude": 0.9108865812035863
+          },
+          {
+            "decay_s": 0.4898163128045695,
+            "frequency_hz": 1473.666314071228,
+            "level_db": -0.8021660901959631,
+            "relative_amplitude": 0.9117834301306761
+          },
+          {
+            "decay_s": 0.682084566156665,
+            "frequency_hz": 1888.5246938362206,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": 1.0277842594736897,
+            "frequency_hz": 2810.785987092421,
+            "level_db": -0.5873546887681552,
+            "relative_amplitude": 0.9346139641338824
+          },
+          {
+            "decay_s": 0.8965438972790682,
+            "frequency_hz": 4760.827634415416,
+            "level_db": -0.6812574191017539,
+            "relative_amplitude": 0.9245643190266566
+          },
+          {
+            "decay_s": 0.914681423592269,
+            "frequency_hz": 4923.474147444199,
+            "level_db": -0.4941473027109786,
+            "relative_amplitude": 0.9446972146116788
+          }
+        ],
+        "duration_s": 1.6,
+        "envelope_peak_rms": 0.0912605260569157,
+        "envelope_rms_p10": 0.01584933328229434,
+        "envelope_rms_p90": 0.06817920697529495,
+        "event_density_hz": 3.75,
+        "onset_time_s": 0.0,
+        "peak": 0.25913891196250916,
+        "rms": 0.042899400932598815,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 5365.430017042151,
+        "spectral_centroid_trajectory_hz": [
+          5242.573078525286,
+          5303.421127535654,
+          5250.971651078205,
+          5151.36931193746,
+          5296.983735620172
+        ],
+        "spectral_flux": 0.21134654154001886,
+        "spectral_rolloff_85_hz": 9543.125,
+        "zero_crossing_rate": 0.4311831037266595
+      },
+      "filename": "10-pen-write-normal.wav",
+      "pcm_sha256": "2ff9df7aaf769a13494677c495b61eee7a6d21fa6ab3014f4f5af6e10564d1df",
+      "sample_count": 38400,
+      "uri": "sfx:pen.write?duration=1.6&speed=normal&pressure=0.55&seed=510"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 1.3969999999999998,
+        "attack_duration_s": 0.392,
+        "band_energy_fraction": {
+          "0_250_hz": 0.0034381127660782214,
+          "1k_5k_hz": 0.44954926124798994,
+          "250_1000_hz": 0.06257183094908413,
+          "5k_12k_hz": 0.48442206711175306
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": null,
+            "frequency_hz": 1797.9045178695158,
+            "level_db": -2.6911833994837826,
+            "relative_amplitude": 0.7335687633400341
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2466.8215156981837,
+            "level_db": -2.5894151549324955,
+            "relative_amplitude": 0.7422141713975057
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2695.343593321148,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 3064.095124168339,
+            "level_db": -1.7551720157562645,
+            "relative_amplitude": 0.817036388492036
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 3137.3758490930754,
+            "level_db": -2.1364083081134666,
+            "relative_amplitude": 0.781951081405833
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 3900.5356506353787,
+            "level_db": -2.4326909762049183,
+            "relative_amplitude": 0.7557278919446763
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 5210.743795085744,
+            "level_db": -2.734318127428031,
+            "relative_amplitude": 0.7299348408114316
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 5591.11111683028,
+            "level_db": -1.5713882980662102,
+            "relative_amplitude": 0.8345081550731157
+          }
+        ],
+        "duration_s": 1.4,
+        "envelope_peak_rms": 0.0761104592216684,
+        "envelope_rms_p10": 0.012258482725216633,
+        "envelope_rms_p90": 0.05471325658125676,
+        "event_density_hz": 5.714285714285714,
+        "onset_time_s": 0.002,
+        "peak": 0.211873397231102,
+        "rms": 0.03356370443131917,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 5371.458133176426,
+        "spectral_centroid_trajectory_hz": [
+          5488.044283999801,
+          5332.352272787831,
+          5407.457404032196,
+          5204.759176991915,
+          5243.396605709243
+        ],
+        "spectral_flux": 0.20520605931515873,
+        "spectral_rolloff_85_hz": 9532.857142857143,
+        "zero_crossing_rate": 0.40248221673264084
+      },
+      "filename": "11-pen-write-fast-light.wav",
+      "pcm_sha256": "0a5a0c750b4997d755703e196ba555ebb38e22df1b7db7556be5a9ba9c31ada7",
+      "sample_count": 33600,
+      "uri": "sfx:pen.write?duration=1.4&speed=fast&pressure=0.25&seed=511"
+    },
+    {
+      "analysis": {
+        "active_duration_s": 1.387,
+        "attack_duration_s": 0.40299999999999997,
+        "band_energy_fraction": {
+          "0_250_hz": 0.004099330810571428,
+          "1k_5k_hz": 0.45333449187129776,
+          "250_1000_hz": 0.06248850795299162,
+          "5k_12k_hz": 0.4800075916779613
+        },
+        "dominant_peaks": [
+          {
+            "decay_s": null,
+            "frequency_hz": 1736.0380110640253,
+            "level_db": -1.531381328193597,
+            "relative_amplitude": 0.8383607424333148
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 1992.5316761891138,
+            "level_db": -0.9798042868825679,
+            "relative_amplitude": 0.8933256121919817
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2049.174019077748,
+            "level_db": -0.6824678311747947,
+            "relative_amplitude": 0.9244354864155371
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2156.6861898324064,
+            "level_db": 0.0,
+            "relative_amplitude": 1.0
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2536.70818186068,
+            "level_db": -1.8074048168567072,
+            "relative_amplitude": 0.8121378644594899
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 2958.149868055845,
+            "level_db": -0.9777627682917145,
+            "relative_amplitude": 0.8935356027931106
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 3087.2421832120203,
+            "level_db": -1.613380966046313,
+            "relative_amplitude": 0.830483391695732
+          },
+          {
+            "decay_s": null,
+            "frequency_hz": 3814.511527685293,
+            "level_db": -0.854033677618653,
+            "relative_amplitude": 0.9063549607600848
+          }
+        ],
+        "duration_s": 1.4,
+        "envelope_peak_rms": 0.11331450531040174,
+        "envelope_rms_p10": 0.01747032080701509,
+        "envelope_rms_p90": 0.08408350205732007,
+        "event_density_hz": 4.285714285714286,
+        "onset_time_s": 0.007,
+        "peak": 0.3150516450405121,
+        "rms": 0.053156269754342324,
+        "sample_rate": 24000,
+        "spectral_centroid_hz": 5334.994644324807,
+        "spectral_centroid_trajectory_hz": [
+          5516.857945828509,
+          5062.918687947453,
+          5587.165171348861,
+          5407.350156632093,
+          5171.39987633128
+        ],
+        "spectral_flux": 0.20590419636622231,
+        "spectral_rolloff_85_hz": 9620.714285714286,
+        "zero_crossing_rate": 0.4425429328253817
+      },
+      "filename": "12-pen-write-slow-heavy.wav",
+      "pcm_sha256": "8d5a171b2be5955cdf9959bf07d90a2a31e3f19c707e5d5bc26b41b425ae4308",
+      "sample_count": 33600,
+      "uri": "sfx:pen.write?duration=1.4&speed=slow&pressure=0.9&seed=512"
+    }
+  ],
+  "sample_rate": 24000,
+  "schema": "sfxrender.regression-baseline.v1"
+}

@@ -1,6 +1,12 @@
 """Dependency-light procedural MVP effects."""
 
 from __future__ import annotations
+from ._doorbell import generate_door_chime, render_door_chime, render_electronic_doorbell
+from ._phone import (
+    generate_classic_phone_ringer,
+    render_classic_phone_ring,
+    render_electronic_phone_ring,
+)
 
 import math
 
@@ -10,16 +16,25 @@ from ._doors import generate_door_model, render_close, render_open
 from ._footsteps import aggregate_footstep, solid_footstep
 from ._params import choice, integer, number
 from ._pen import render_pen_write
+from ._object_effects import (
+    render_button_press,
+    render_glass_clink,
+    render_object_set_down,
+    render_switch_toggle,
+)
+from ._paper import render_page_turn, render_paper_handle
 from ._physics.contact import ImpactContact, impact_force
 from ._physics.geometry import rectangular_plate_modes
 from ._physics.physical_impacts import render_physical_impact
 from ._physics.presets import KNOCK_IMPACTORS, KNOCK_OBJECTS, OBJECT_PRESETS
 from ._physics.rng import RandomStream, event_rng
 from ._printer import (
+    generate_printer_model,
     render_printer_power_switch,
     render_printer_print,
     render_printer_restart,
     render_printer_tray_open,
+    render_printer_tray_close,
     render_printer_wake,
 )
 from .types import FloatAudio, RenderContext, RenderedSound, SfxSpec
@@ -179,6 +194,77 @@ def knock(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     return RenderedSound(_limit_peak(result), context.sample_rate, spec)
 
 
+def switch_toggle(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    state = choice(spec.parameters, "state", "on", {"on", "off"})
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_switch_toggle(sample_rate=context.sample_rate, state=state, seed=seed)
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def button_press(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    size = choice(spec.parameters, "size", "small", {"small", "large"})
+    force = choice(spec.parameters, "force", "normal", {"gentle", "normal", "firm"})
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_button_press(
+        sample_rate=context.sample_rate, size=size, force=force, seed=seed
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def object_set_down(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    object_type = choice(
+        spec.parameters, "object", "wood", {"wood", "metal", "ceramic"}
+    )
+    surface = choice(spec.parameters, "surface", "wood", {"wood", "stone"})
+    force = choice(spec.parameters, "force", "normal", {"gentle", "normal", "firm"})
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_object_set_down(
+        sample_rate=context.sample_rate,
+        object_type=object_type,
+        surface=surface,
+        force=force,
+        seed=seed,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def glass_clink(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    style = choice(spec.parameters, "style", "wine", {"wine", "tumbler"})
+    count = integer(spec.parameters, "count", 1, minimum=1, maximum=4)
+    force = choice(spec.parameters, "force", "normal", {"gentle", "normal", "firm"})
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_glass_clink(
+        sample_rate=context.sample_rate, style=style, count=count, force=force, seed=seed
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def paper_page_turn(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    pages = integer(spec.parameters, "pages", 1, minimum=1, maximum=6)
+    speed = choice(spec.parameters, "speed", "normal", {"slow", "normal", "fast"})
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_page_turn(
+        sample_rate=context.sample_rate, pages=pages, speed=speed, seed=seed
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def paper_handle(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    duration = number(
+        spec.parameters, "duration", 1.2, minimum=0.3, maximum=4.0
+    )
+    intensity = choice(
+        spec.parameters, "intensity", "normal", {"gentle", "normal", "rough"}
+    )
+    seed = spec.seed if spec.seed is not None else 0
+    samples = render_paper_handle(
+        sample_rate=context.sample_rate,
+        duration=duration,
+        intensity=intensity,
+        seed=seed,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
 def _footstep_hit(
     *,
     sample_rate: int,
@@ -248,48 +334,48 @@ def phone_ring(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     style = choice(params, "style", "classic", {"classic", "electronic"})
     count = integer(params, "count", 1, minimum=1, maximum=12)
     interval = number(params, "interval", 1.15, minimum=0.25, maximum=5.0)
+    seed = spec.seed if spec.seed is not None else 0
     ring_duration = 0.62 if style == "classic" else 0.42
-    n = int(ring_duration * context.sample_rate)
-    t = np.arange(n, dtype=np.float32) / np.float32(context.sample_rate)
+    if style == "classic":
+        model = generate_classic_phone_ringer(seed=seed, sample_rate=context.sample_rate)
+        ring = render_classic_phone_ring(
+            model, duration_s=ring_duration, sample_rate=context.sample_rate
+        )
+    else:
+        ring = render_electronic_phone_ring(
+            seed=seed, duration_s=ring_duration, sample_rate=context.sample_rate
+        )
     spacing = int(interval * context.sample_rate)
-    total = spacing * (count - 1) + n
+    total = spacing * (count - 1) + ring.size
     result = np.zeros(total, dtype=np.float32)
-
     for index in range(count):
-        rng = _rng(spec, index)
-        level = float(rng.uniform(0.9, 1.0))
-        phase = float(rng.uniform(-0.15, 0.15))
-        drift = float(rng.uniform(-0.5, 0.5))
-        if style == "classic":
-            frequency_a = float(rng.uniform(436.0, 444.0))
-            frequency_b = float(rng.uniform(476.0, 484.0))
-            carrier = 0.62 * np.sin(2.0 * math.pi * (frequency_a * t + 0.5 * drift * t * t) + phase)
-            carrier += 0.38 * np.sin(
-                2.0 * math.pi * (frequency_b * t + 0.5 * drift * t * t) - phase
-            )
-            wobble_rate = float(rng.uniform(19.0, 21.0))
-            modulation = 0.78 + 0.22 * np.sin(2.0 * math.pi * wobble_rate * t + phase)
-            ring = np.asarray(carrier * modulation, dtype=np.float32)
-        else:
-            frequency_a = float(rng.uniform(868.0, 892.0))
-            frequency_b = float(rng.uniform(1300.0, 1340.0))
-            carrier = np.sin(2.0 * math.pi * frequency_a * t + phase)
-            carrier += 0.45 * np.sin(2.0 * math.pi * frequency_b * t - phase)
-            pulse_rate = float(rng.uniform(6.6, 7.4))
-            duty = float(rng.uniform(-0.19, -0.11))
-            gate = (np.sin(2.0 * math.pi * pulse_rate * t + phase) > duty).astype(np.float32)
-            ring = np.asarray(carrier * gate, dtype=np.float32)
-
-        attack = min(n, max(1, int(0.012 * context.sample_rate)))
-        release = min(n, max(1, int(0.035 * context.sample_rate)))
-        envelope = np.ones(n, dtype=np.float32)
-        envelope[:attack] = np.linspace(0.0, 1.0, attack, dtype=np.float32)
-        envelope[-release:] *= np.linspace(1.0, 0.0, release, dtype=np.float32)
-        ring = np.asarray(ring, dtype=np.float32) * envelope * np.float32(0.62 * level)
-        start = index * spacing
-        result[start : start + n] += ring
+        _mix_at(result, ring, index * spacing)
     return RenderedSound(_limit_peak(result), context.sample_rate, spec)
 
+
+
+def doorbell_ring(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    params = spec.parameters
+    style = choice(params, "style", "chime", {"chime", "electronic"})
+    count = integer(params, "count", 1, minimum=1, maximum=12)
+    interval = number(params, "interval", 0.8, minimum=0.2, maximum=10.0)
+    seed = spec.seed if spec.seed is not None else 0
+    ring_duration = 0.72
+    if style == "chime":
+        model = generate_door_chime(seed=seed, sample_rate=context.sample_rate)
+        ring = render_door_chime(
+            model, duration_s=ring_duration, sample_rate=context.sample_rate
+        )
+    else:
+        ring = render_electronic_doorbell(
+            seed=seed, duration_s=ring_duration, sample_rate=context.sample_rate
+        )
+    spacing = int(interval * context.sample_rate)
+    total = spacing * (count - 1) + ring.size
+    result = np.zeros(total, dtype=np.float32)
+    for index in range(count):
+        _mix_at(result, ring, index * spacing)
+    return RenderedSound(_limit_peak(result), context.sample_rate, spec)
 
 def door_open(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     params = spec.parameters
@@ -343,8 +429,31 @@ def printer_tray_open(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     speed = choice(params, "speed", "normal", {"slow", "normal", "fast"})
     paper_load = choice(params, "paper_load", "full", {"empty", "partial", "full"})
     seed = spec.seed if spec.seed is not None else 0
+    model = generate_printer_model(seed=seed, sample_rate=context.sample_rate)
     samples = render_printer_tray_open(
-        sample_rate=context.sample_rate, speed=speed, paper_load=paper_load, seed=seed
+        sample_rate=context.sample_rate,
+        speed=speed,
+        paper_load=paper_load,
+        seed=seed,
+        model=model,
+    )
+    return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
+
+
+def printer_tray_close(spec: SfxSpec, context: RenderContext) -> RenderedSound:
+    params = spec.parameters
+    speed = choice(params, "speed", "normal", {"slow", "normal", "fast"})
+    paper_load = choice(params, "paper_load", "full", {"empty", "partial", "full"})
+    force = choice(params, "force", "normal", {"gentle", "normal", "firm"})
+    seed = spec.seed if spec.seed is not None else 0
+    model = generate_printer_model(seed=seed, sample_rate=context.sample_rate)
+    samples = render_printer_tray_close(
+        sample_rate=context.sample_rate,
+        speed=speed,
+        paper_load=paper_load,
+        force=force,
+        seed=seed,
+        model=model,
     )
     return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
 
@@ -360,8 +469,11 @@ def printer_power_switch(spec: SfxSpec, context: RenderContext) -> RenderedSound
 def printer_restart(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     params = spec.parameters
     speed = choice(params, "speed", "normal", {"slow", "normal", "fast"})
+    beep = choice(params, "beep", "off", {"off", "on"}) == "on"
     seed = spec.seed if spec.seed is not None else 0
-    samples = render_printer_restart(sample_rate=context.sample_rate, speed=speed, seed=seed)
+    samples = render_printer_restart(
+        sample_rate=context.sample_rate, speed=speed, seed=seed, beep=beep
+    )
     return RenderedSound(_limit_peak(samples), context.sample_rate, spec)
 
 
@@ -384,6 +496,9 @@ def pen_write(spec: SfxSpec, context: RenderContext) -> RenderedSound:
 def printer_wake(spec: SfxSpec, context: RenderContext) -> RenderedSound:
     params = spec.parameters
     depth = choice(params, "depth", "light", {"light", "deep"})
+    beep = choice(params, "beep", "off", {"off", "on"}) == "on"
     seed = spec.seed if spec.seed is not None else 0
-    samples = render_printer_wake(sample_rate=context.sample_rate, depth=depth, seed=seed)
+    samples = render_printer_wake(
+        sample_rate=context.sample_rate, depth=depth, seed=seed, beep=beep
+    )
     return RenderedSound(_limit_peak(samples), context.sample_rate, spec)

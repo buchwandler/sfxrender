@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -17,6 +18,15 @@ from ._dsp import (
 )
 from ._physics.motion import minimum_jerk_motion
 from .types import FloatAudio
+from ._physics.contact import ImpactContact
+from ._physics.modes import Mode, ModeSet
+from ._physics.rng import component_rng
+from ._electronic import TonePreset, TonePulse, render_tone_pattern
+from ._physics.electromechanical import render_electromechanical_hum
+from ._physics.rotating import render_rotating_machine
+from ._physics.closure import render_terminal_closure
+from ._physics.models import FrictionProfile, ModalBody, Mode as SlidingMode, MotionCurve
+from ._physics.sliding import render_sliding_source
 
 _PRINTER_SALT = 0x50524E54
 _SWITCH_CONTACT = 1
@@ -26,6 +36,7 @@ _PAPER = 4
 _FAN = 5
 _CHASSIS = 6
 _VARIATION = 7
+_TONE = 12
 _CHASSIS_MODES = (
     (185.0, 0.080, 0.34),
     (315.0, 0.065, 0.30),
@@ -40,6 +51,97 @@ _RESTART_DURATION = {"slow": 4.0, "normal": 2.8, "fast": 1.9}
 _WAKE_DURATION = {"light": 0.70, "deep": 1.15}
 
 
+@dataclass(frozen=True, slots=True)
+class PrinterModel:
+    """Stable generated chassis, tray, motor, fan, and contact identity."""
+
+    seed: int
+    sample_rate: int
+    chassis_modes: ModeSet
+    tray_modes: ModeSet
+    relay_contact: ImpactContact
+    switch_contact: ImpactContact
+    tray_stop_contact: ImpactContact
+    latch_contact: ImpactContact
+    motor_nominal_hz: float
+    motor_detune_hz: float
+    motor_wobble_hz: float
+    motor_ripple_rate_hz: float
+    fan_band_hz: tuple[float, float]
+
+
+def generate_printer_model(*, seed: int, sample_rate: int) -> PrinterModel:
+    """Generate deterministic printer identity for a seed and sample rate."""
+    if sample_rate <= 0:
+        raise ValueError("sample_rate must be positive")
+    chassis_rng = component_rng(seed, _PRINTER_SALT, _CHASSIS, sample_rate)
+    chassis_modes = ModeSet(
+        tuple(
+            Mode(
+                frequency * float(chassis_rng.uniform(0.985, 1.015)),
+                decay * float(chassis_rng.uniform(0.94, 1.06)),
+                input_gain=float(gain * chassis_rng.uniform(0.88, 1.12)),
+                radiation_gain=gain,
+                modal_mass_kg=0.12 + index * 0.04,
+            )
+            for index, (frequency, decay, gain) in enumerate(_CHASSIS_MODES)
+            if frequency < sample_rate * 0.44
+        )
+    )
+    tray_rng = component_rng(seed, _PRINTER_SALT, 8, sample_rate)
+    tray_modes = ModeSet(
+        tuple(
+            Mode(
+                frequency * float(tray_rng.uniform(0.97, 1.03)),
+                decay * float(tray_rng.uniform(0.92, 1.08)),
+                input_gain=float(gain * tray_rng.uniform(0.85, 1.15)),
+                radiation_gain=gain,
+                modal_mass_kg=0.06 + index * 0.025,
+            )
+            for index, (frequency, decay, gain) in enumerate(
+                ((240.0, 0.12, 0.36), (480.0, 0.09, 0.30), (860.0, 0.065, 0.24),
+                 (1_430.0, 0.045, 0.18), (2_250.0, 0.03, 0.11))
+            )
+            if frequency < sample_rate * 0.44
+        )
+    )
+
+    def contact(component_id: int, mass: tuple[float, float], stiffness: tuple[float, float]) -> ImpactContact:
+        rng = component_rng(seed, _PRINTER_SALT, component_id, sample_rate)
+        return ImpactContact(
+            effective_mass_kg=float(rng.uniform(*mass)),
+            stiffness=float(rng.uniform(*stiffness)),
+            exponent=1.5,
+            restitution=float(rng.uniform(0.25, 0.48)),
+        )
+
+    motor_rng = component_rng(seed, _PRINTER_SALT, _MOTOR, sample_rate)
+    fan_rng = component_rng(seed, _PRINTER_SALT, _FAN, sample_rate)
+    return PrinterModel(
+        seed=seed,
+        sample_rate=sample_rate,
+        chassis_modes=chassis_modes,
+        tray_modes=tray_modes,
+        relay_contact=contact(_SWITCH_CONTACT, (0.001, 0.004), (6.0e7, 1.4e8)),
+        switch_contact=contact(9, (0.001, 0.003), (8.0e7, 1.8e8)),
+        tray_stop_contact=contact(10, (0.015, 0.05), (1.2e7, 3.6e7)),
+        latch_contact=contact(11, (0.001, 0.006), (4.0e7, 1.1e8)),
+        motor_nominal_hz=float(motor_rng.uniform(76.0, 112.0)),
+        motor_detune_hz=float(motor_rng.uniform(-1.8, 1.8)),
+        motor_wobble_hz=float(motor_rng.uniform(1.1, 2.8)),
+        motor_ripple_rate_hz=float(motor_rng.uniform(8.0, 19.0)),
+        fan_band_hz=(float(fan_rng.uniform(75.0, 110.0)), float(fan_rng.uniform(3_000.0, 4_000.0))),
+    )
+
+
+def _resolve_model(seed: int, sample_rate: int, model: PrinterModel | None) -> PrinterModel:
+    if model is None:
+        return generate_printer_model(seed=seed, sample_rate=sample_rate)
+    if model.seed != seed or model.sample_rate != sample_rate:
+        raise ValueError("PrinterModel identity must match seed and sample_rate")
+    return model
+
+
 def _component_rng(seed: int, event_index: int, component_id: int) -> np.random.Generator:
     """Make an independent, stable stream for one physical layer and event."""
     sequence = np.random.SeedSequence([int(seed), _PRINTER_SALT, event_index, component_id])
@@ -52,7 +154,10 @@ def _click(
     event_index: int,
     *,
     strength: float = 1.0,
+    model: PrinterModel | None = None,
+    body: str = "chassis",
 ) -> FloatAudio:
+    model = _resolve_model(seed, sample_rate, model)
     size = max(1, round(0.105 * sample_rate))
     pulse = asymmetric_pulse(
         size,
@@ -66,10 +171,17 @@ def _click(
     burst_time = np.arange(size, dtype=np.float32) / np.float32(sample_rate)
     burst *= np.exp(-burst_time / np.float32(0.012))
     excitation = np.asarray(pulse * 0.72 + burst * 0.20, dtype=np.float32)
-    mode_rng = _component_rng(seed, event_index, _CHASSIS)
-    modes = tuple(mode for mode in _CHASSIS_MODES if mode[0] < sample_rate * 0.46)
-    body = modal_bank(excitation, sample_rate, mode_rng, modes)
-    return np.asarray((excitation * 0.58 + body * 0.24) * np.float32(strength), dtype=np.float32)
+    mode_set = model.chassis_modes if body == "chassis" else model.tray_modes
+    mode_rng = _component_rng(model.seed, 0, _CHASSIS if body == "chassis" else _GEAR)
+    modes = tuple(
+        (mode.frequency_hz, mode.decay_s, mode.input_gain * mode.radiation_gain)
+        for mode in mode_set.modes
+        if mode.frequency_hz < sample_rate * 0.46
+    )
+    body_response = modal_bank(excitation, sample_rate, mode_rng, modes)
+    return np.asarray(
+        (excitation * 0.58 + body_response * 0.24) * np.float32(strength), dtype=np.float32
+    )
 
 
 def _motor_whir(
@@ -80,29 +192,30 @@ def _motor_whir(
     *,
     amplitude: float = 0.22,
     envelope: FloatAudio | None = None,
+    model: PrinterModel | None = None,
 ) -> FloatAudio:
     if size <= 0:
         return np.zeros(0, dtype=np.float32)
-    rng = _component_rng(seed, event_index, _MOTOR)
+    model = _resolve_model(seed, sample_rate, model)
     variation = _component_rng(seed, event_index, _VARIATION)
     time = np.arange(size, dtype=np.float64) / sample_rate
     duration = size / sample_rate
-    base_hz = float(rng.uniform(76.0, 112.0))
+    base_hz = model.motor_nominal_hz
     attack = max(0.025, min(0.14, duration * 0.24))
     ramp = np.clip(time / attack, 0.0, 1.0)
     release_s = max(0.045, min(0.18, duration * 0.26))
     release = np.clip((duration - time) / release_s, 0.0, 1.0)
     motion = ramp * release
-    detune = float(rng.uniform(-1.8, 1.8))
-    frequency = base_hz * (0.78 + 0.22 * ramp) + detune
-    frequency += 1.1 * np.sin(2.0 * math.pi * float(rng.uniform(1.1, 2.8)) * time)
-    phase = np.cumsum(2.0 * math.pi * frequency / sample_rate, dtype=np.float64)
-    gear_rate = float(rng.uniform(8.0, 19.0))
-    ripple = 0.84 + 0.16 * np.sin(2.0 * math.pi * gear_rate * time + float(rng.uniform(-1, 1)))
-    tone = np.zeros(size, dtype=np.float64)
-    for harmonic, gain in ((1, 1.0), (2, 0.42), (3, 0.23), (4, 0.12)):
-        if base_hz * harmonic < sample_rate * 0.46:
-            tone += np.sin(phase * harmonic + float(rng.uniform(-0.12, 0.12))) * gain
+    frequency = base_hz * (0.78 + 0.22 * ramp) + model.motor_detune_hz
+    frequency += 1.1 * np.sin(2.0 * math.pi * model.motor_wobble_hz * time)
+    tone = render_rotating_machine(
+        speed_curve_hz=np.asarray(frequency, dtype=np.float32),
+        sample_rate=sample_rate,
+        seed=seed,
+        event_index=event_index,
+        ripple_rate_hz=model.motor_ripple_rate_hz,
+        amplitude=0.21,
+    )
     texture = bandpass_noise(
         variation,
         size,
@@ -114,7 +227,7 @@ def _motor_whir(
         env = np.asarray(motion, dtype=np.float32)
     else:
         env = np.asarray(envelope[:size], dtype=np.float32) * np.asarray(motion, dtype=np.float32)
-    signal = (tone * ripple * 0.21 + texture.astype(np.float64) * 0.11) * env
+    signal = (tone.astype(np.float64) + texture.astype(np.float64) * 0.11) * env
     return np.asarray(signal * amplitude, dtype=np.float32)
 
 
@@ -126,13 +239,16 @@ def _fan_noise(
     *,
     amplitude: float = 0.055,
     envelope: FloatAudio | None = None,
+    model: PrinterModel | None = None,
 ) -> FloatAudio:
     if size <= 0:
         return np.zeros(0, dtype=np.float32)
-    rng = _component_rng(seed, event_index, _FAN)
-    noise = bandpass_noise(rng, size, sample_rate, 75.0, min(4_000.0, sample_rate * 0.44))
-    noise = one_pole_highpass(noise, sample_rate, 75.0)
-    noise = one_pole_lowpass(noise, sample_rate, min(3_400.0, sample_rate * 0.44))
+    model = _resolve_model(seed, sample_rate, model)
+    rng = _component_rng(model.seed, 0, _FAN)
+    low, high = model.fan_band_hz
+    noise = bandpass_noise(rng, size, sample_rate, low, min(high, sample_rate * 0.44))
+    noise = one_pole_highpass(noise, sample_rate, low)
+    noise = one_pole_lowpass(noise, sample_rate, min(high * 0.85, sample_rate * 0.44))
     if envelope is None:
         time = np.arange(size, dtype=np.float32) / np.float32(sample_rate)
         env = np.asarray(
@@ -244,6 +360,71 @@ def _mixed(size: int, layers: list[tuple[FloatAudio, int]]) -> FloatAudio:
     return result
 
 
+def _printer_beep(*, sample_rate: int, seed: int, event_index: int) -> FloatAudio:
+    preset = TonePreset(
+        frequency_hz=880.0,
+        harmonic_gains=(1.0, 0.30),
+        attack_s=0.004,
+        release_s=0.035,
+        bandwidth_hz=(500.0, 3_700.0),
+        transient_click=0.015,
+    )
+    return render_tone_pattern(
+        preset=preset,
+        pulses=(TonePulse(start_s=0.0, duration_s=0.09, level=0.14),),
+        duration_s=0.12,
+        sample_rate=sample_rate,
+        rng=component_rng(seed, _PRINTER_SALT, _TONE, event_index),
+    )
+
+
+def _tray_body(model: PrinterModel) -> ModalBody:
+    return ModalBody(
+        modes=tuple(
+            SlidingMode(
+                frequency_hz=mode.frequency_hz,
+                decay_s=mode.decay_s,
+                gain=mode.input_gain * mode.radiation_gain,
+            )
+            for mode in model.tray_modes.modes
+        )
+    )
+
+
+def _tray_sliding(
+    motion: MotionCurve,
+    *,
+    sample_rate: int,
+    seed: int,
+    event_index: int,
+    model: PrinterModel,
+    paper_load: str,
+) -> FloatAudio:
+    velocity = np.abs(motion.velocity)
+    peak = float(np.max(velocity)) if velocity.size else 0.0
+    activity = np.asarray(velocity / max(peak, 1e-8), dtype=np.float32)
+    load = {"empty": 0.0, "partial": 0.5, "full": 1.0}[paper_load]
+    profile = FrictionProfile(
+        base_gain=0.52 + 0.12 * load,
+        roughness=0.64,
+        noise_band_hz=(90.0, 3_200.0),
+        stick_strength=0.11 + 0.03 * load,
+        slip_strength=0.42,
+        f0_hz=(180.0, 480.0),
+        harmonic_rolloff=(1.6, 2.2),
+        chaos_amount=0.25,
+    )
+    return render_sliding_source(
+        motion=motion,
+        profile=profile,
+        sample_rate=sample_rate,
+        seed=seed,
+        event_index=event_index,
+        body=_tray_body(model),
+        activity=activity,
+    )
+
+
 def render_printer_print(*, sample_rate: int, pages: int, speed: str, seed: int) -> FloatAudio:
     page_duration = _PAGE_DURATION[speed]
     startup = 0.12
@@ -293,43 +474,115 @@ def render_printer_print(*, sample_rate: int, pages: int, speed: str, seed: int)
 
 
 def render_printer_tray_open(
-    *, sample_rate: int, speed: str, paper_load: str, seed: int
+    *,
+    sample_rate: int,
+    speed: str,
+    paper_load: str,
+    seed: int,
+    model: PrinterModel | None = None,
 ) -> FloatAudio:
+    model = _resolve_model(seed, sample_rate, model)
     duration = _TRAY_DURATION[speed]
-    total_duration = duration + 0.19
-    size = max(1, round(total_duration * sample_rate))
     motion = minimum_jerk_motion(duration_s=duration, sample_rate=sample_rate)
-    velocity = np.abs(motion.velocity)
-    velocity /= np.float32(max(float(np.max(velocity)), 1e-8))
-    rng = _component_rng(seed, 0, _GEAR)
-    rail_low = bandpass_noise(
-        rng, motion.position.size, sample_rate, 90.0, min(900.0, sample_rate * 0.40)
+    sliding = _tray_sliding(
+        motion,
+        sample_rate=sample_rate,
+        seed=seed,
+        event_index=0,
+        model=model,
+        paper_load=paper_load,
     )
-    rail_high = bandpass_noise(
-        rng, motion.position.size, sample_rate, 600.0, min(3_500.0, sample_rate * 0.44)
+    latch = render_terminal_closure(
+        contact=model.latch_contact,
+        velocity_m_s=0.14,
+        modes=model.tray_modes,
+        sample_rate=sample_rate,
+        seed=seed,
+        event_index=1,
+        output_gain=15.0,
+        tail_s=0.06,
     )
-    rail = np.asarray(
-        (rail_low * 0.58 + rail_high * 0.44) * (0.10 + 0.90 * velocity) * 0.28,
-        dtype=np.float32,
+    stop_velocity = {"slow": 0.24, "normal": 0.34, "fast": 0.48}[speed]
+    stop = render_terminal_closure(
+        contact=model.tray_stop_contact,
+        velocity_m_s=stop_velocity,
+        modes=model.tray_modes,
+        sample_rate=sample_rate,
+        seed=seed,
+        event_index=3,
+        output_gain=18.0,
+        tail_s=0.18,
     )
-    stick = _roller_train(sample_rate, duration, seed, 2, rate_hz=6.0, amplitude=0.045)
-    latch = _click(sample_rate, seed, 1, strength=0.62)
-    stop = _click(sample_rate, seed, 3, strength=0.50)
+    size = motion.position.size + round(0.19 * sample_rate)
     layers: list[tuple[FloatAudio, int]] = [
         (latch, 0),
-        (rail, round(0.035 * sample_rate)),
-        (stick, round(0.06 * sample_rate)),
-        (stop, round(duration * sample_rate)),
+        (sliding, round(0.035 * sample_rate)),
+        (stop, motion.position.size),
     ]
     load_gain = {"empty": 0.0, "partial": 0.24, "full": 0.55}[paper_load]
     if load_gain:
         paper = _paper_rustle(sample_rate, 0.20, seed, 4, amplitude=load_gain)
-        paper = np.asarray(0.42 * np.tanh(paper / np.float32(0.42)), dtype=np.float32)
         layers.append((paper, round(duration * 0.43 * sample_rate)))
         if paper_load == "full":
             layers.append(
-                (_click(sample_rate, seed, 5, strength=0.16), round(duration * 0.83 * sample_rate))
+                (
+                    _click(sample_rate, seed, 5, strength=0.16, model=model, body="tray"),
+                    round(duration * 0.83 * sample_rate),
+                )
             )
+    return _mixed(size, layers)
+
+
+def render_printer_tray_close(
+    *,
+    sample_rate: int,
+    speed: str,
+    paper_load: str,
+    force: str,
+    seed: int,
+    model: PrinterModel | None = None,
+) -> FloatAudio:
+    model = _resolve_model(seed, sample_rate, model)
+    duration = _TRAY_DURATION[speed]
+    opening_motion = minimum_jerk_motion(duration_s=duration, sample_rate=sample_rate)
+    motion = MotionCurve(
+        position=np.asarray(1.0 - opening_motion.position, dtype=np.float32),
+        velocity=np.asarray(-opening_motion.velocity, dtype=np.float32),
+        acceleration=np.asarray(-opening_motion.acceleration, dtype=np.float32),
+    )
+    sliding = _tray_sliding(
+        motion,
+        sample_rate=sample_rate,
+        seed=seed,
+        event_index=6,
+        model=model,
+        paper_load=paper_load,
+    )
+    load_scale = {"empty": 0.0, "partial": 0.5, "full": 1.0}[paper_load]
+    terminal_velocity = {"gentle": 0.22, "normal": 0.42, "firm": 0.68}[force]
+    terminal = render_terminal_closure(
+        contact=model.tray_stop_contact,
+        velocity_m_s=terminal_velocity * (1.0 + 0.08 * load_scale),
+        modes=model.tray_modes,
+        sample_rate=sample_rate,
+        seed=seed,
+        event_index=7,
+        output_gain=20.0,
+        tail_s=0.18,
+    )
+    latch = _click(
+        sample_rate, seed, 8, strength=0.42, model=model, body="tray"
+    )
+    size = motion.position.size + round(0.19 * sample_rate)
+    layers: list[tuple[FloatAudio, int]] = [
+        (sliding, round(0.035 * sample_rate)),
+        (terminal, motion.position.size),
+        (latch, motion.position.size + round(0.025 * sample_rate)),
+    ]
+    paper_gain = {"empty": 0.0, "partial": 0.20, "full": 0.46}[paper_load]
+    if paper_gain:
+        paper = _paper_rustle(sample_rate, 0.22, seed, 9, amplitude=paper_gain)
+        layers.append((paper, round(duration * 0.25 * sample_rate)))
     return _mixed(size, layers)
 
 
@@ -364,7 +617,9 @@ def render_printer_power_switch(*, sample_rate: int, state: str, seed: int) -> F
     )
 
 
-def render_printer_restart(*, sample_rate: int, speed: str, seed: int) -> FloatAudio:
+def render_printer_restart(
+    *, sample_rate: int, speed: str, seed: int, beep: bool = False
+) -> FloatAudio:
     duration = _RESTART_DURATION[speed]
     size = round(duration * sample_rate)
     bed_env = envelope_from_points(
@@ -382,6 +637,17 @@ def render_printer_restart(*, sample_rate: int, speed: str, seed: int) -> FloatA
     layers: list[tuple[FloatAudio, int]] = [
         (_click(sample_rate, seed, 0, strength=0.72), 0),
         (_fan_noise(sample_rate, size, seed, 0, amplitude=0.042, envelope=bed_env), 0),
+        (
+            render_electromechanical_hum(
+                sample_rate=sample_rate,
+                size=size,
+                seed=seed,
+                event_index=0,
+                amplitude=0.012,
+                envelope=bed_env,
+            ),
+            0,
+        ),
         (
             _motor_whir(sample_rate, size, seed, 0, amplitude=0.27, envelope=bed_env),
             round(0.12 * sample_rate),
@@ -412,10 +678,16 @@ def render_printer_restart(*, sample_rate: int, speed: str, seed: int) -> FloatA
     layers.append(
         (_click(sample_rate, seed, 30, strength=0.42), round(duration * 0.88 * sample_rate))
     )
+    if beep:
+        layers.append(
+            (_printer_beep(sample_rate=sample_rate, seed=seed, event_index=31), size - round(0.12 * sample_rate))
+        )
     return _mixed(size, layers)
 
 
-def render_printer_wake(*, sample_rate: int, depth: str, seed: int) -> FloatAudio:
+def render_printer_wake(
+    *, sample_rate: int, depth: str, seed: int, beep: bool = False
+) -> FloatAudio:
     duration = _WAKE_DURATION[depth]
     size = round(duration * sample_rate)
     layers: list[tuple[FloatAudio, int]] = [(_click(sample_rate, seed, 0, strength=0.52), 0)]
@@ -428,6 +700,19 @@ def render_printer_wake(*, sample_rate: int, depth: str, seed: int) -> FloatAudi
     )
     layers.append(
         (_fan_noise(sample_rate, fan_size, seed, 0, amplitude=0.034, envelope=fan_env), fan_start)
+    )
+    layers.append(
+        (
+            render_electromechanical_hum(
+                sample_rate=sample_rate,
+                size=fan_size,
+                seed=seed,
+                event_index=1,
+                amplitude=0.008,
+                envelope=fan_env,
+            ),
+            fan_start,
+        )
     )
     twitch_duration = 0.22 if depth == "light" else 0.34
     twitch_start = round(0.19 * sample_rate)
@@ -454,5 +739,9 @@ def render_printer_wake(*, sample_rate: int, depth: str, seed: int) -> FloatAudi
                 _roller_train(sample_rate, 0.11, seed, 4, rate_hz=15.0, amplitude=0.065),
                 round(0.67 * sample_rate),
             )
+        )
+    if beep:
+        layers.append(
+            (_printer_beep(sample_rate=sample_rate, seed=seed, event_index=32), size - round(0.12 * sample_rate))
         )
     return _mixed(size, layers)

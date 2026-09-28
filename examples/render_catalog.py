@@ -69,6 +69,8 @@ CATALOG_ITEMS = (
         "15-printer-wake.wav",
         "sfx:printer.wake?depth=light&seed=106",
     ),
+    ("16-doorbell-chime.wav", "sfx:doorbell.ring?style=chime&count=1&seed=107"),
+    ("17-doorbell-electronic.wav", "sfx:doorbell.ring?style=electronic&count=1&seed=108"),
 )
 
 

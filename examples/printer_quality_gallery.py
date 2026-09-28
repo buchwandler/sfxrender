@@ -29,20 +29,28 @@ PRINTER_ITEMS = (
         "05-printer-tray-open-empty.wav",
         "sfx:printer.tray_open?speed=normal&paper_load=empty&seed=505",
     ),
-    ("06-printer-power-off.wav", "sfx:printer.power_switch?state=off&seed=506"),
-    ("07-printer-power-on.wav", "sfx:printer.power_switch?state=on&seed=507"),
-    ("08-printer-restart-normal.wav", "sfx:printer.restart?speed=normal&seed=508"),
-    ("09-printer-wake-light.wav", "sfx:printer.wake?depth=light&seed=509"),
     (
-        "10-pen-write-normal.wav",
+        "06-printer-tray-close-gentle-empty.wav",
+        "sfx:printer.tray_close?speed=normal&paper_load=empty&force=gentle&seed=506",
+    ),
+    (
+        "07-printer-tray-close-firm-full.wav",
+        "sfx:printer.tray_close?speed=normal&paper_load=full&force=firm&seed=507",
+    ),
+    ("08-printer-power-off.wav", "sfx:printer.power_switch?state=off&seed=508"),
+    ("09-printer-power-on.wav", "sfx:printer.power_switch?state=on&seed=509"),
+    ("10-printer-restart-normal.wav", "sfx:printer.restart?speed=normal&seed=510"),
+    ("11-printer-wake-light.wav", "sfx:printer.wake?depth=light&seed=511"),
+    (
+        "12-pen-write-normal.wav",
         "sfx:pen.write?duration=1.6&speed=normal&pressure=0.55&seed=510",
     ),
     (
-        "11-pen-write-fast-light.wav",
-        "sfx:pen.write?duration=1.4&speed=fast&pressure=0.25&seed=511",
+        "13-pen-write-fast-light.wav",
+        "sfx:pen.write?duration=1.4&speed=fast&pressure=0.25&seed=513",
     ),
     (
-        "12-pen-write-slow-heavy.wav",
+        "14-pen-write-slow-heavy.wav",
         "sfx:pen.write?duration=1.4&speed=slow&pressure=0.9&seed=512",
     ),
 )

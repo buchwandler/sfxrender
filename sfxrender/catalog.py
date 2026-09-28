@@ -74,6 +74,195 @@ _BUILTIN_CATALOG: dict[str, dict[str, Any]] = {
             ],
         },
     },
+    "switch.toggle": {
+        "description": "Toggle a small mechanical switch with its actuation and return clicks.",
+        "parameters": {
+            "state": {
+                "type": "enum",
+                "values": ["on", "off"],
+                "default": "on",
+                "description": "Whether the switch toggles into its on or off position.",
+            },
+            "seed": {
+                "type": "integer",
+                "required": False,
+                "description": "Optional non-negative deterministic variation seed.",
+            },
+        },
+        "llm": {
+            "use_when": ["someone flips a small physical switch", "a mechanical switch clicks on or off"],
+            "avoid_when": ["a large power switch or machine startup is intended", "a touchscreen control is tapped"],
+            "examples": [
+                "sfx:switch.toggle?state=on&seed=42",
+                "sfx:switch.toggle?state=off&seed=43",
+            ],
+        },
+    },
+    "button.press": {
+        "description": "Press a mechanical button and hear its click and return.",
+        "parameters": {
+            "size": {
+                "type": "enum",
+                "values": ["small", "large"],
+                "default": "small",
+                "description": "Approximate size and resonance of the button assembly.",
+            },
+            "force": {
+                "type": "enum",
+                "values": ["gentle", "normal", "firm"],
+                "default": "normal",
+                "description": "How firmly the button is pressed.",
+            },
+            "seed": {
+                "type": "integer",
+                "required": False,
+                "description": "Optional non-negative deterministic variation seed.",
+            },
+        },
+        "llm": {
+            "use_when": ["a physical button is pressed", "a device button clicks under a finger"],
+            "avoid_when": ["a switch is toggled", "a soft screen control is touched"],
+            "examples": [
+                "sfx:button.press?size=small&force=normal&seed=42",
+                "sfx:button.press?size=large&force=firm&seed=43",
+            ],
+        },
+    },
+    "object.set_down": {
+        "description": "Set a small object onto a wooden or stone surface with a coupled impact.",
+        "parameters": {
+            "object": {
+                "type": "enum",
+                "values": ["wood", "metal", "ceramic"],
+                "default": "wood",
+                "description": "Material character of the object being set down.",
+            },
+            "surface": {
+                "type": "enum",
+                "values": ["wood", "stone"],
+                "default": "wood",
+                "description": "Supporting surface struck by the object.",
+            },
+            "force": {
+                "type": "enum",
+                "values": ["gentle", "normal", "firm"],
+                "default": "normal",
+                "description": "How gently or firmly the object is placed.",
+            },
+            "seed": {
+                "type": "integer",
+                "required": False,
+                "description": "Optional non-negative deterministic variation seed.",
+            },
+        },
+        "llm": {
+            "use_when": ["a small object is placed on a table", "a metal, wooden, or ceramic object touches down"],
+            "avoid_when": ["an object is dropped from a height", "a person sets down a large piece of furniture"],
+            "examples": [
+                "sfx:object.set_down?object=wood&surface=wood&force=gentle&seed=42",
+                "sfx:object.set_down?object=ceramic&surface=stone&force=firm&seed=43",
+            ],
+        },
+    },
+    "glass.clink": {
+        "description": "Clink wine glasses or tumblers together with a resonant coupled response.",
+        "parameters": {
+            "style": {
+                "type": "enum",
+                "values": ["wine", "tumbler"],
+                "default": "wine",
+                "description": "Shape and resonant character of the glassware.",
+            },
+            "count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4,
+                "default": 1,
+                "description": "Number of glass clinks.",
+            },
+            "force": {
+                "type": "enum",
+                "values": ["gentle", "normal", "firm"],
+                "default": "normal",
+                "description": "Strength of each glass contact.",
+            },
+            "seed": {
+                "type": "integer",
+                "required": False,
+                "description": "Optional non-negative deterministic variation seed.",
+            },
+        },
+        "llm": {
+            "use_when": ["two glasses clink together", "a glass is lightly tapped with a resonant ring"],
+            "avoid_when": ["glass shatters", "a glass is set down on a table"],
+            "examples": [
+                "sfx:glass.clink?style=wine&count=1&force=gentle&seed=42",
+                "sfx:glass.clink?style=tumbler&count=2&force=normal&seed=43",
+            ],
+        },
+    },
+    "paper.page_turn": {
+        "description": "A small stack of sheets turning with papery flutter and light crinkle.",
+        "parameters": {
+            "pages": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 6,
+                "default": 1,
+                "description": "Number of sheets turned in sequence.",
+            },
+            "speed": {
+                "type": "enum",
+                "values": ["slow", "normal", "fast"],
+                "default": "normal",
+                "description": "Pace of the page-turn gesture.",
+            },
+            "seed": {
+                "type": "integer",
+                "required": False,
+                "description": "Optional non-negative deterministic variation seed.",
+            },
+        },
+        "llm": {
+            "use_when": ["turning a page in a book", "flipping a few loose sheets"],
+            "avoid_when": ["paper tearing", "a printer feeding or ejecting a sheet"],
+            "examples": [
+                "sfx:paper.page_turn?pages=1&speed=slow&seed=42",
+                "sfx:paper.page_turn?pages=4&speed=fast&seed=43",
+            ],
+        },
+    },
+    "paper.handle": {
+        "description": "Continuous close-up handling of paper with irregular friction and flutter.",
+        "parameters": {
+            "duration": {
+                "type": "seconds",
+                "minimum": 0.3,
+                "maximum": 4.0,
+                "default": 1.2,
+                "description": "Length of the paper-handling gesture.",
+            },
+            "intensity": {
+                "type": "enum",
+                "values": ["gentle", "normal", "rough"],
+                "default": "normal",
+                "description": "Amount of sheet motion and rubbing.",
+            },
+            "seed": {
+                "type": "integer",
+                "required": False,
+                "description": "Optional non-negative deterministic variation seed.",
+            },
+        },
+        "llm": {
+            "use_when": ["someone shuffles or handles sheets", "a soft paper rustle close by"],
+            "avoid_when": ["pages turning one at a time", "a printer mechanism moving paper"],
+            "examples": [
+                "sfx:paper.handle?duration=1.2&intensity=gentle&seed=42",
+                "sfx:paper.handle?duration=2.4&intensity=rough&seed=43",
+            ],
+        },
+    },
     "footsteps.walk": {
         "description": "A sequence of walking footsteps.",
         "parameters": {
@@ -181,6 +370,51 @@ _BUILTIN_CATALOG: dict[str, dict[str, Any]] = {
             "examples": [
                 "sfx:phone.ring?style=classic&count=2&seed=42",
                 "sfx:phone.ring?style=electronic&count=3&interval=0.72&seed=43",
+            ],
+        },
+    },
+    "doorbell.ring": {
+        "description": "Activate a mechanical two-note door chime or an electronic doorbell melody.",
+        "parameters": {
+            "style": {
+                "type": "enum",
+                "values": ["chime", "electronic"],
+                "default": "chime",
+                "description": "Doorbell source: struck mechanical chime bars or electronic tones.",
+            },
+            "count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 12,
+                "default": 1,
+                "description": "Number of doorbell activations.",
+            },
+            "interval": {
+                "type": "seconds",
+                "minimum": 0.2,
+                "maximum": 10.0,
+                "default": 0.8,
+                "description": "Spacing in seconds between repeated activations.",
+            },
+            "seed": {
+                "type": "integer",
+                "required": False,
+                "description": "Optional non-negative seed identifying the generated chime or tone variation.",
+            },
+        },
+        "llm": {
+            "use_when": [
+                "a doorbell or entry chime is activated",
+                "someone rings a mechanical or electronic doorbell",
+            ],
+            "avoid_when": [
+                "someone knocks on a door",
+                "a telephone rings",
+                "a phone notification sounds",
+            ],
+            "examples": [
+                "sfx:doorbell.ring?style=chime&count=1&seed=42",
+                "sfx:doorbell.ring?style=electronic&count=2&interval=0.8&seed=43",
             ],
         },
     },
@@ -374,6 +608,52 @@ _BUILTIN_CATALOG: dict[str, dict[str, Any]] = {
             ],
         },
     },
+    "printer.tray_close": {
+        "description": "Slide a printer paper tray closed and engage its terminal latch.",
+        "parameters": {
+            "speed": {
+                "type": "enum",
+                "values": ["slow", "normal", "fast"],
+                "default": "normal",
+                "description": "Speed at which the printer tray slides closed.",
+            },
+            "paper_load": {
+                "type": "enum",
+                "values": ["empty", "partial", "full"],
+                "default": "full",
+                "description": "Approximate amount of paper in the tray; controls paper and sliding sounds.",
+            },
+            "force": {
+                "type": "enum",
+                "values": ["gentle", "normal", "firm"],
+                "default": "normal",
+                "description": "How firmly the tray reaches its closed stop.",
+            },
+            "seed": {
+                "type": "integer",
+                "required": False,
+                "description": (
+                    "Optional non-negative deterministic variation seed. Reuse the same seed "
+                    "when reproducible output is required."
+                ),
+            },
+        },
+        "llm": {
+            "use_when": [
+                "someone pushes a printer paper tray shut",
+                "a printer paper drawer slides closed and latches",
+            ],
+            "avoid_when": [
+                "paper is being printed",
+                "a normal room door closes",
+                "the tray remains open",
+            ],
+            "examples": [
+                "sfx:printer.tray_close?speed=normal&paper_load=full&force=firm&seed=42",
+                "sfx:printer.tray_close?speed=fast&paper_load=empty&force=gentle&seed=43",
+            ],
+        },
+    },
     "printer.power_switch": {
         "description": "Operate a printer power control and its local relay/mechanical response.",
         "parameters": {
@@ -409,13 +689,19 @@ _BUILTIN_CATALOG: dict[str, dict[str, Any]] = {
         },
     },
     "printer.restart": {
-        "description": "Printer boot and mechanical calibration sequence after power-on.",
+        "description": "Printer boot and mechanical calibration sequence with an optional confirmation tone.",
         "parameters": {
             "speed": {
                 "type": "enum",
                 "values": ["slow", "normal", "fast"],
                 "default": "normal",
                 "description": "Duration and speed of the startup calibration sequence.",
+            },
+            "beep": {
+                "type": "enum",
+                "values": ["off", "on"],
+                "default": "off",
+                "description": "Whether to sound a short electronic confirmation tone after restart.",
             },
             "seed": {
                 "type": "integer",
@@ -439,6 +725,7 @@ _BUILTIN_CATALOG: dict[str, dict[str, Any]] = {
             "examples": [
                 "sfx:printer.restart?speed=normal&seed=42",
                 "sfx:printer.restart?speed=fast&seed=43",
+                "sfx:printer.restart?speed=normal&beep=on&seed=44",
             ],
         },
     },
@@ -492,13 +779,19 @@ _BUILTIN_CATALOG: dict[str, dict[str, Any]] = {
         },
     },
     "printer.wake": {
-        "description": "Wake a sleeping printer with a short relay, motor, and fan response.",
+        "description": "Wake a sleeping printer with a short relay, motor, fan, and optional confirmation tone.",
         "parameters": {
             "depth": {
                 "type": "enum",
                 "values": ["light", "deep"],
                 "default": "light",
                 "description": "Wake response depth; deep has more mechanical activity.",
+            },
+            "beep": {
+                "type": "enum",
+                "values": ["off", "on"],
+                "default": "off",
+                "description": "Whether to sound a short electronic confirmation tone after waking.",
             },
             "seed": {
                 "type": "integer",
@@ -523,6 +816,7 @@ _BUILTIN_CATALOG: dict[str, dict[str, Any]] = {
             "examples": [
                 "sfx:printer.wake?depth=light&seed=42",
                 "sfx:printer.wake?depth=deep&seed=43",
+                "sfx:printer.wake?depth=deep&beep=on&seed=44",
             ],
         },
     },

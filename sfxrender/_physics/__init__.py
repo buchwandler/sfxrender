@@ -10,13 +10,30 @@ from .geometry import (
 )
 from .materials import MATERIALS, MechanicalMaterial
 from .modes import Mode, ModeSet, decay_from_q, filter_audio_modes, q_from_decay
+from .physical_impacts import ImpactResponse, render_coupled_impact, render_force_response, render_physical_impact
 from .radiation import radiation_efficiency
 from .resonator import ModalResonatorBank, modal_response
-from .rng import RandomStream, event_rng
+from .rng import RandomStream, component_rng, event_rng
+from .electromechanical import render_electromechanical_hum
+from .rotating import render_rotating_machine
+from .closure import render_terminal_closure
+from .sliding import render_sliding_source
+from .thin_material import (
+    ThinMaterialPreset,
+    generate_thin_material_preset,
+    render_thin_material_source,
+)
+from .strikes import (
+    StrikeEvent,
+    StruckResonatorPreset,
+    build_contact_force_bus,
+    render_strike_train,
+)
 
 __all__ = [
     "MATERIALS",
     "BoundaryCondition",
+    "ImpactResponse",
     "LumpedBody",
     "MechanicalMaterial",
     "ModalResonatorBank",
@@ -24,6 +41,10 @@ __all__ = [
     "ModeSet",
     "RandomStream",
     "RectangularPlate",
+    "StrikeEvent",
+    "StruckResonatorPreset",
+    "build_contact_force_bus",
+    "component_rng",
     "decay_from_q",
     "event_rng",
     "filter_audio_modes",
@@ -33,4 +54,15 @@ __all__ = [
     "q_from_decay",
     "radiation_efficiency",
     "rectangular_plate_modes",
+    "render_coupled_impact",
+    "render_force_response",
+    "render_physical_impact",
+    "render_electromechanical_hum",
+    "render_rotating_machine",
+    "render_terminal_closure",
+    "render_sliding_source",
+    "ThinMaterialPreset",
+    "generate_thin_material_preset",
+    "render_thin_material_source",
+    "render_strike_train",
 ]
