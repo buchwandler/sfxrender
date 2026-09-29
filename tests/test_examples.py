@@ -70,10 +70,17 @@ def test_examples_write_reproducible_wavs_only_to_requested_directory(tmp_path: 
             "footstep-quality-showcase.wav",
         ],
         "keyboard_quality_gallery.py": [
-            "keyboard-slow-light.wav",
-            "keyboard-steady-light.wav",
-            "keyboard-fast-light.wav",
-            "keyboard-fast-firm.wav",
+            "01-normal-light-single.wav",
+            "02-normal-firm-single.wav",
+            "03-normal-variant-strip.wav",
+            "04-space-single.wav",
+            "05-enter-single.wav",
+            "06-backspace-single.wav",
+            "07-release-focused.wav",
+            "08-slow-light.wav",
+            "09-steady-light.wav",
+            "10-fast-light.wav",
+            "11-fast-firm.wav",
             "keyboard-quality-showcase.wav",
         ],
         "door_quality_gallery.py": [
@@ -209,6 +216,61 @@ def test_analyze_foley_writes_deterministic_metrics_to_requested_directory(
         "tail_rms",
     ):
         assert metric in content.splitlines()[0]
+    assert set(ROOT.glob("*.wav")) == root_wavs_before
+
+
+def test_analyze_keyboard_writes_deterministic_metrics_to_requested_directory(
+    tmp_path: Path,
+) -> None:
+    root_wavs_before = set(ROOT.glob("*.wav"))
+    first_dir = tmp_path / "keyboard-analysis"
+    second_dir = tmp_path / "repeat-keyboard-analysis"
+    _run_example("analyze_keyboard.py", first_dir)
+    _run_example("analyze_keyboard.py", second_dir)
+    report = first_dir / "keyboard-analysis.txt"
+    repeated = second_dir / "keyboard-analysis.txt"
+    assert report.is_file()
+    assert report.read_bytes() == repeated.read_bytes()
+    content = report.read_text(encoding="utf-8")
+    for label in (
+        "normal-light-v0",
+        "normal-firm-v0",
+        "space-light",
+        "enter-light",
+        "backspace-light",
+        "normal-release-focused",
+        "typing-slow-light",
+        "typing-steady-light",
+        "typing-fast-light",
+        "typing-fast-firm",
+    ):
+        assert label in content
+    for metric in (
+        "duration_s",
+        "peak",
+        "rms",
+        "onset_time_s",
+        "attack_duration_s",
+        "active_duration_s",
+        "spectral_centroid_hz",
+        "spectral_flatness",
+        "zero_crossing_rate",
+        "dominant_peak_hz",
+        "dominant_peak_relative_amplitude",
+        "dominant_bin_fraction",
+        "fraction_80_250_hz",
+        "fraction_250_1200_hz",
+        "fraction_1200_5000_hz",
+        "fraction_5000_9000_hz",
+        "early_rms",
+        "mid_rms",
+        "tail_rms",
+        "tail_to_early_ratio",
+    ):
+        assert metric in content.splitlines()[0]
+    assert {path.name for path in first_dir.iterdir()} == {"keyboard-analysis.txt"}
+    assert {path.name for path in second_dir.iterdir()} == {"keyboard-analysis.txt"}
+    assert set(tmp_path.iterdir()) == {first_dir, second_dir}
     assert set(ROOT.glob("*.wav")) == root_wavs_before
 
 

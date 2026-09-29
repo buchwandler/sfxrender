@@ -6,12 +6,12 @@ import numpy as np
 
 from sfxrender._foley_profiles import AGGREGATE_SURFACE_PROFILES, FOOTWEAR_PROFILES
 from sfxrender._footsteps import (
-    FrictionEvent,
     FootstepExciter,
-    generate_footstep_exciter,
+    FrictionEvent,
     _floor_modes,
     _mechanical_friction_audio,
     _sample_particle_events,
+    generate_footstep_exciter,
     solid_footstep,
 )
 from sfxrender._physics.presets import FLOOR_OBJECTS, FOOTWEAR_CONTACTS

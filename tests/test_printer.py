@@ -4,9 +4,11 @@ import numpy as np
 import pytest
 
 from sfxrender import SFXRenderer
-
-from sfxrender._printer import generate_printer_model
-from sfxrender._printer import render_printer_tray_close, render_printer_tray_open
+from sfxrender._printer import (
+    generate_printer_model,
+    render_printer_tray_close,
+    render_printer_tray_open,
+)
 
 _PRINTER_URIS = (
     "sfx:printer.print?pages=2&speed=normal&seed=17",

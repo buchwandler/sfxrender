@@ -94,13 +94,13 @@ def render_tone_pattern(
         start = round(pulse.start_s * sample_rate)
         time = np.arange(pulse_size, dtype=np.float64) / sample_rate
         phase = float(rng.uniform(-math.pi, math.pi))
-        tone = np.zeros(pulse_size, dtype=np.float64)
+        harmonics = np.zeros(pulse_size, dtype=np.float64)
         for harmonic, gain in enumerate(preset.harmonic_gains, start=1):
             frequency = preset.frequency_hz * pulse.pitch_scale * harmonic
             if frequency >= sample_rate * 0.49:
                 continue
-            tone += gain * np.sin(2.0 * math.pi * frequency * time + phase * harmonic)
-        tone = np.asarray(tone, dtype=np.float32)
+            harmonics += gain * np.sin(2.0 * math.pi * frequency * time + phase * harmonic)
+        tone: FloatAudio = np.asarray(harmonics, dtype=np.float32)
         if preset.distortion > 0.0:
             tone = np.asarray(np.tanh(tone * (1.0 + 5.0 * preset.distortion)), dtype=np.float32)
         if preset.bandwidth_hz is not None:

@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-
 from dataclasses import replace
+
 import numpy as np
 
 from sfxrender import SFXRenderer
+from sfxrender._foley_profiles import FOOTWEAR_PROFILES
 from sfxrender._footsteps import (
     FrictionEvent,
     _solid_footstep,
     generate_footstep_exciter,
 )
-from sfxrender._foley_profiles import FOOTWEAR_PROFILES
 from sfxrender._physics.presets import FOOTWEAR_CONTACTS
 
 

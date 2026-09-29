@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import math
 
-
 from ..types import FloatAudio
 from .contact import ImpactContact, impact_force
 from .modes import ModeSet

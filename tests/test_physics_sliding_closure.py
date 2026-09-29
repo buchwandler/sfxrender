@@ -4,8 +4,9 @@ import numpy as np
 import pytest
 
 from sfxrender._physics.closure import render_terminal_closure
+from sfxrender._physics.models import FrictionProfile, ModalBody
+from sfxrender._physics.models import Mode as SlidingMode
 from sfxrender._physics.motion import minimum_jerk_motion
-from sfxrender._physics.models import FrictionProfile, ModalBody, Mode as SlidingMode
 from sfxrender._physics.sliding import render_sliding_source
 from sfxrender._printer import generate_printer_model
 

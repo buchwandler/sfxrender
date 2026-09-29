@@ -16,17 +16,18 @@ from ._dsp import (
     one_pole_highpass,
     one_pole_lowpass,
 )
-from ._physics.motion import minimum_jerk_motion
-from .types import FloatAudio
-from ._physics.contact import ImpactContact
-from ._physics.modes import Mode, ModeSet
-from ._physics.rng import component_rng
 from ._electronic import TonePreset, TonePulse, render_tone_pattern
-from ._physics.electromechanical import render_electromechanical_hum
-from ._physics.rotating import render_rotating_machine
 from ._physics.closure import render_terminal_closure
-from ._physics.models import FrictionProfile, ModalBody, Mode as SlidingMode, MotionCurve
+from ._physics.contact import ImpactContact
+from ._physics.electromechanical import render_electromechanical_hum
+from ._physics.models import FrictionProfile, ModalBody, MotionCurve
+from ._physics.models import Mode as SlidingMode
+from ._physics.modes import Mode, ModeSet
+from ._physics.motion import minimum_jerk_motion
+from ._physics.rng import component_rng
+from ._physics.rotating import render_rotating_machine
 from ._physics.sliding import render_sliding_source
+from .types import FloatAudio
 
 _PRINTER_SALT = 0x50524E54
 _SWITCH_CONTACT = 1

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-
 from ._electronic import TonePreset, TonePulse, render_tone_pattern
 from ._physics.contact import ImpactContact
 from ._physics.modes import Mode, ModeSet

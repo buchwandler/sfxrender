@@ -1222,7 +1222,7 @@ _BUILTIN_CATALOG: dict[str, dict[str, Any]] = {
         },
     },
     "keyboard.typing": {
-        "description": "Naturalistic procedural computer-keyboard typing with varied key presses, release/top-out sounds, larger-key events, and humanized timing.",
+        "description": "Naturalistic procedural computer-keyboard typing with broadband press and bottom-out contacts, distinct top-out releases, subdued case coloration, larger-key mechanics, and humanized timing.",
         "parameters": {
             "speed": {
                 "type": "enum",

@@ -1,5 +1,7 @@
 """Private perceptual physics building blocks for procedural Foley."""
 
+from .closure import render_terminal_closure
+from .electromechanical import render_electromechanical_hum
 from .geometry import (
     BoundaryCondition,
     LumpedBody,
@@ -19,23 +21,21 @@ from .physical_impacts import (
 from .radiation import radiation_efficiency
 from .resonator import ModalResonatorBank, modal_response
 from .rng import RandomStream, component_rng, event_rng
-from .electromechanical import render_electromechanical_hum
 from .rotating import render_rotating_machine
-from .closure import render_terminal_closure
 from .sliding import render_sliding_source
-from .thin_material import (
-    ThinMaterialPreset,
-    generate_thin_material_preset,
-    render_thin_material_source,
-)
 from .stochastic import StochasticEvent, sample_stochastic_events
-from .turbulence import render_turbulence_layer
 from .strikes import (
     StrikeEvent,
     StruckResonatorPreset,
     build_contact_force_bus,
     render_strike_train,
 )
+from .thin_material import (
+    ThinMaterialPreset,
+    generate_thin_material_preset,
+    render_thin_material_source,
+)
+from .turbulence import render_turbulence_layer
 
 __all__ = [
     "MATERIALS",
@@ -48,13 +48,16 @@ __all__ = [
     "ModeSet",
     "RandomStream",
     "RectangularPlate",
+    "StochasticEvent",
     "StrikeEvent",
     "StruckResonatorPreset",
+    "ThinMaterialPreset",
     "build_contact_force_bus",
     "component_rng",
     "decay_from_q",
     "event_rng",
     "filter_audio_modes",
+    "generate_thin_material_preset",
     "modal_response",
     "plate_mode_shape",
     "plate_modes",
@@ -62,17 +65,14 @@ __all__ = [
     "radiation_efficiency",
     "rectangular_plate_modes",
     "render_coupled_impact",
+    "render_electromechanical_hum",
     "render_force_response",
     "render_physical_impact",
-    "render_electromechanical_hum",
     "render_rotating_machine",
-    "render_terminal_closure",
     "render_sliding_source",
-    "ThinMaterialPreset",
-    "generate_thin_material_preset",
-    "render_thin_material_source",
-    "StochasticEvent",
-    "sample_stochastic_events",
-    "render_turbulence_layer",
     "render_strike_train",
+    "render_terminal_closure",
+    "render_thin_material_source",
+    "render_turbulence_layer",
+    "sample_stochastic_events",
 ]

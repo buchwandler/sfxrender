@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 import numpy as np
 
 from ._dsp import mix_at
@@ -143,7 +142,7 @@ def render_button_press(*, sample_rate: int, size: str, force: str, seed: int) -
         11,
         ((260.0, 0.085, 0.34), (640.0, 0.060, 0.24), (1_400.0, 0.035, 0.12)),
     )
-    mass, stiffness = (0.0015, 0.004) if size == "small" else (0.004, 0.012)
+    mass, _stiffness = (0.0015, 0.004) if size == "small" else (0.004, 0.012)
     contact = _contact(
         seed,
         sample_rate,

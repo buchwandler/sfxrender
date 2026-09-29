@@ -10,9 +10,9 @@ from ._dsp import mix_at
 from ._physics.closure import render_terminal_closure
 from ._physics.contact import ImpactContact
 from ._physics.geometry import rectangular_plate_modes
-from ._physics.modes import Mode, ModeSet
 from ._physics.models import FrictionProfile, ModalBody, MotionCurve
 from ._physics.models import Mode as BodyMode
+from ._physics.modes import Mode, ModeSet
 from ._physics.presets import FLOOR_OBJECTS
 from ._physics.rng import component_rng
 from ._physics.sliding import render_sliding_source

@@ -8,7 +8,6 @@ import numpy as np
 
 from sfxrender import RenderedSound, SFXRenderer, SfxSpec
 
-
 RINGING_ITEMS = (
     ("phone-classic.wav", "sfx:phone.ring?style=classic&count=2&interval=1.2&seed=21"),
     ("phone-electronic.wav", "sfx:phone.ring?style=electronic&count=2&interval=1.2&seed=21"),

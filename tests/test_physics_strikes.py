@@ -15,7 +15,6 @@ from sfxrender._physics.strikes import (
     render_strike_train,
 )
 
-
 _CONTACT = ImpactContact(effective_mass_kg=0.025, stiffness=2.0e7, restitution=0.38)
 
 

@@ -1,28 +1,16 @@
 """Dependency-light procedural MVP effects."""
 
 from __future__ import annotations
-from ._doorbell import generate_door_chime, render_door_chime, render_electronic_doorbell
-from ._phone import (
-    generate_classic_phone_ringer,
-    render_classic_phone_ring,
-    render_electronic_phone_ring,
-)
 
 import math
 
 import numpy as np
 
-from ._doors import generate_door_model, render_close, render_open
-from ._footsteps import aggregate_footstep, solid_footstep
-from ._params import choice, integer, number
-from ._pen import render_pen_write
-from ._object_effects import (
-    render_button_press,
-    render_glass_clink,
-    render_object_set_down,
-    render_switch_toggle,
+from ._ambience import (
+    render_city_ambience,
+    render_office_ambience,
+    render_room_tone,
 )
-from ._paper import render_page_turn, render_paper_handle
 from ._device_effects import (
     render_device_beep,
     render_device_power_off,
@@ -31,11 +19,8 @@ from ._device_effects import (
     render_phone_notification,
     render_phone_vibrate,
 )
-from ._ambience import (
-    render_city_ambience,
-    render_office_ambience,
-    render_room_tone,
-)
+from ._doorbell import generate_door_chime, render_door_chime, render_electronic_doorbell
+from ._doors import generate_door_model, render_close, render_open
 from ._environment import (
     render_birds_ambience,
     render_crickets_ambience,
@@ -44,12 +29,14 @@ from ._environment import (
     render_transition_whoosh,
     render_wind,
 )
-from ._keyboard import render_keyboard_typing
-from ._metal_effects import (
-    render_alarm_ring,
-    render_clock_tick,
-    render_keys_jingle,
+from ._fluid_effects import (
+    render_crowd_murmur,
+    render_thunder,
+    render_water_pour,
+    render_water_running,
 )
+from ._footsteps import aggregate_footstep, solid_footstep
+from ._keyboard import render_keyboard_typing
 from ._material_effects import (
     render_car_door,
     render_chair_move,
@@ -57,16 +44,24 @@ from ._material_effects import (
     render_floor_creak,
     render_lock_turn,
 )
-from ._transport_effects import (
-    render_car_engine,
-    render_car_passby,
-    render_elevator_arrive,
+from ._metal_effects import (
+    render_alarm_ring,
+    render_clock_tick,
+    render_keys_jingle,
 )
-from ._fluid_effects import (
-    render_crowd_murmur,
-    render_thunder,
-    render_water_pour,
-    render_water_running,
+from ._object_effects import (
+    render_button_press,
+    render_glass_clink,
+    render_object_set_down,
+    render_switch_toggle,
+)
+from ._paper import render_page_turn, render_paper_handle
+from ._params import choice, integer, number
+from ._pen import render_pen_write
+from ._phone import (
+    generate_classic_phone_ringer,
+    render_classic_phone_ring,
+    render_electronic_phone_ring,
 )
 from ._physics.contact import ImpactContact, impact_force
 from ._physics.geometry import rectangular_plate_modes
@@ -78,9 +73,14 @@ from ._printer import (
     render_printer_power_switch,
     render_printer_print,
     render_printer_restart,
-    render_printer_tray_open,
     render_printer_tray_close,
+    render_printer_tray_open,
     render_printer_wake,
+)
+from ._transport_effects import (
+    render_car_engine,
+    render_car_passby,
+    render_elevator_arrive,
 )
 from .types import FloatAudio, RenderContext, RenderedSound, SfxSpec
 
